@@ -1,5 +1,6 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Heart, MessageCircle, Edit, Trash2 } from "lucide-react";
@@ -23,6 +24,7 @@ export interface PostDetailModalProps {
     imageUrl: string;
     title: string;
     content: string;
+    week: string;
     author: {
       name: string;
       profileImage?: string;
@@ -87,7 +89,10 @@ export function PostDetailModal({
             </DialogHeader>
 
             <div className="flex-1 overflow-y-auto p-6 space-y-6 pb-24">
-              <p className="text-sm leading-relaxed" data-testid="text-post-detail-content">{post.content}</p>
+              <div className="space-y-3">
+                <Badge data-testid="badge-week-detail">{post.week}</Badge>
+                <p className="text-sm leading-relaxed" data-testid="text-post-detail-content">{post.content}</p>
+              </div>
 
               <div className="flex items-center gap-4">
                 <Button
