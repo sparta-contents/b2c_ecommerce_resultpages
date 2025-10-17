@@ -68,8 +68,8 @@ export function PostDetailModal({
               data-testid="img-post-detail"
             />
           </div>
-          <div className="flex flex-col">
-            <DialogHeader className="p-6 pb-4 border-b">
+          <div className="flex flex-col h-full">
+            <DialogHeader className="p-6 pb-4 border-b shrink-0">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <Avatar className="h-10 w-10">
@@ -86,7 +86,7 @@ export function PostDetailModal({
               </div>
             </DialogHeader>
 
-            <div className="flex-1 overflow-y-auto p-6 space-y-6">
+            <div className="flex-1 overflow-y-auto p-6 space-y-6 pb-24">
               <p className="text-sm leading-relaxed" data-testid="text-post-detail-content">{post.content}</p>
 
               <div className="flex items-center gap-4">
@@ -148,7 +148,7 @@ export function PostDetailModal({
               </div>
             </div>
 
-            <div className="p-4 border-t sticky bottom-0 bg-background">
+            <div className="p-4 border-t bg-background shrink-0">
               <div className="flex gap-2">
                 <Textarea
                   placeholder="댓글을 입력하세요..."
