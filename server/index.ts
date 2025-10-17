@@ -1,9 +1,13 @@
 // Temporary file to run Vite dev server
 import { spawn } from 'child_process';
 
-const vite = spawn('npx', ['vite', '--port', '5000', '--host', '0.0.0.0'], {
+const vite = spawn('npx', ['vite', '--port', '5000', '--host', '0.0.0.0', '--strictPort'], {
   stdio: 'inherit',
   cwd: process.cwd(),
+  env: {
+    ...process.env,
+    DANGEROUSLY_DISABLE_HOST_CHECK: 'true',
+  },
 });
 
 vite.on('error', (error) => {
