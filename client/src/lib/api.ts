@@ -4,6 +4,7 @@ export interface PostWithDetails {
   id: string;
   title: string;
   content: string;
+  week: string;
   imageUrl: string;
   heartCount: number;
   commentCount: number;

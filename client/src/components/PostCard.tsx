@@ -1,11 +1,13 @@
 import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import { Heart, MessageCircle } from "lucide-react";
 
 export interface PostCardProps {
   id: string;
   imageUrl: string;
   title: string;
+  week: string;
   author: {
     name: string;
     profileImage?: string;
@@ -19,6 +21,7 @@ export interface PostCardProps {
 export function PostCard({
   imageUrl,
   title,
+  week,
   author,
   contentPreview,
   heartCount,
@@ -37,6 +40,9 @@ export function PostCard({
           alt={title}
           className="w-full h-full object-cover"
         />
+        <Badge className="absolute top-2 left-2" data-testid="badge-week">
+          {week}
+        </Badge>
       </div>
       <div className="p-4 space-y-3">
         <h3 className="font-semibold text-lg line-clamp-1" data-testid="text-post-title">
