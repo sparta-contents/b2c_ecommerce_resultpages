@@ -20,13 +20,14 @@ export default function Home() {
   const { data: user } = useAuth();
   const logout = useLogout();
 
+  const postsUrl = `/api/posts?sortBy=${sortBy}${showMyPosts && user ? `&userId=${user.id}` : ''}`;
   const { data: posts = [] } = useQuery<PostWithDetails[]>({
-    queryKey: ["/api/posts", { sortBy, userId: showMyPosts && user ? user.id : undefined }],
+    queryKey: [postsUrl],
     enabled: true,
   });
 
   const { data: selectedPost, refetch: refetchPost } = useQuery<PostDetail>({
-    queryKey: ["/api/posts", selectedPostId],
+    queryKey: [`/api/posts/${selectedPostId}`],
     enabled: !!selectedPostId,
   });
 
