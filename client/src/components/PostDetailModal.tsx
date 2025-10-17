@@ -60,7 +60,7 @@ export function PostDetailModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl w-full p-0 gap-0 h-[90vh]" data-testid="modal-post-detail">
+      <DialogContent className="max-w-5xl w-[90vw] h-[85vh] p-0 gap-0" data-testid="modal-post-detail">
         <div className="grid md:grid-cols-[60%_40%] h-full">
           <div className="bg-muted flex items-center justify-center relative h-full">
             <img
