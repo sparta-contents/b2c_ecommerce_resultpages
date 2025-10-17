@@ -11,7 +11,8 @@
 - 인증된 사용자만 글 작성/댓글/좋아요 가능
 
 ### 게시물 관리
-- 게시물 작성 (제목, 내용, 이미지 업로드)
+- 게시물 작성 (제목, 내용, 과제 단계, 이미지 업로드)
+- 과제 단계: 1주차 과제, 2주차 과제, 3주차 과제
 - 게시물 수정/삭제 (본인만 가능)
 - 그리드 레이아웃으로 게시물 목록 표시
 - 모달 형태의 게시물 상세보기
@@ -62,6 +63,7 @@
 - userId (varchar, FK -> users.id)
 - title (varchar)
 - content (text)
+- week (varchar) - 과제 단계 (1주차 과제, 2주차 과제, 3주차 과제)
 - imageUrl (varchar)
 - createdAt (timestamp)
 
@@ -121,9 +123,15 @@
 - `/write` - 게시물 작성
 
 ## 주요 컴포넌트
-- Header: 로고, 정렬 옵션, 프로필 메뉴
+- Header: SPARTA Club 로고, 정렬 옵션, 프로필 메뉴
 - PostGrid: 게시물 그리드 레이아웃
 - PostCard: 개별 게시물 카드
 - PostDetailModal: 게시물 상세 모달
-- CreatePostForm: 게시물 작성 폼
+- CreatePostForm: 게시물 작성 폼 (제목, 내용, 과제 단계 드롭다운, 이미지 업로드)
 - CommentSection: 댓글 섹션
+
+## 예시 데이터
+애플리케이션에는 3개의 예시 게시물이 포함되어 있습니다:
+1. 1주차 과제 - 스파르타 클럽 소개 페이지 제작
+2. 2주차 과제 - To-Do List 앱 개발
+3. 3주차 과제 - 실시간 날씨 정보 앱
