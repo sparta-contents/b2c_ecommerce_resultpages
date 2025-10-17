@@ -132,11 +132,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
 
     try {
-      const { title, content } = req.body;
+      const { title, content, week } = req.body;
       const imageFile = req.file;
 
       if (!imageFile) {
         return res.status(400).json({ error: "Image is required" });
+      }
+
+      if (!week) {
+        return res.status(400).json({ error: "Week is required" });
       }
 
       // Upload image to object storage
@@ -164,6 +168,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         userId: (req.user as any).id,
         title,
         content,
+        week,
         imageUrl,
       });
 

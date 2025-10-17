@@ -44,6 +44,7 @@ export default function Write() {
   const handleSubmit = (data: {
     title: string;
     content: string;
+    week: string;
     image: File | null;
   }) => {
     if (!data.image) {
@@ -54,9 +55,18 @@ export default function Write() {
       return;
     }
 
+    if (!data.week) {
+      toast({
+        title: "과제 단계를 선택해주세요",
+        variant: "destructive",
+      });
+      return;
+    }
+
     const formData = new FormData();
     formData.append("title", data.title);
     formData.append("content", data.content);
+    formData.append("week", data.week);
     formData.append("image", data.image);
 
     createPostMutation.mutate(formData);

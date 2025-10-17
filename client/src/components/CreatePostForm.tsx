@@ -4,16 +4,24 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Upload, X } from "lucide-react";
 
 export interface CreatePostFormProps {
-  onSubmit: (data: { title: string; content: string; image: File | null }) => void;
+  onSubmit: (data: { title: string; content: string; week: string; image: File | null }) => void;
   onCancel: () => void;
 }
 
 export function CreatePostForm({ onSubmit, onCancel }: CreatePostFormProps) {
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
+  const [week, setWeek] = useState("");
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
 
@@ -36,7 +44,7 @@ export function CreatePostForm({ onSubmit, onCancel }: CreatePostFormProps) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit({ title, content, image: imageFile });
+    onSubmit({ title, content, week, image: imageFile });
   };
 
   return (
@@ -107,6 +115,20 @@ export function CreatePostForm({ onSubmit, onCancel }: CreatePostFormProps) {
             required
             data-testid="input-content"
           />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="week">과제 단계</Label>
+          <Select value={week} onValueChange={setWeek} required>
+            <SelectTrigger id="week" data-testid="select-week">
+              <SelectValue placeholder="과제 단계를 선택하세요" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="1주차 과제" data-testid="option-week1">1주차 과제</SelectItem>
+              <SelectItem value="2주차 과제" data-testid="option-week2">2주차 과제</SelectItem>
+              <SelectItem value="3주차 과제" data-testid="option-week3">3주차 과제</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         <div className="flex gap-3 justify-end">
