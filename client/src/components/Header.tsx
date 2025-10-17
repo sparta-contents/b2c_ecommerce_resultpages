@@ -16,6 +16,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { PenSquare, LogOut, User } from "lucide-react";
 import { ThemeToggle } from "./ThemeToggle";
+import logoImage from "@assets/image_1760699207937.png";
 
 export type SortType = "latest" | "popular";
 
@@ -47,7 +48,7 @@ export function Header({
     <header className="sticky top-0 z-50 backdrop-blur-md bg-background/80 border-b">
       <div className="max-w-7xl mx-auto px-4 lg:px-8 h-16 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <h1 className="text-xl font-bold" data-testid="text-app-title">결과물 제출</h1>
+          <img src={logoImage} alt="SPARTA Club" className="h-8" data-testid="img-logo" />
         </div>
 
         <div className="flex items-center gap-3">

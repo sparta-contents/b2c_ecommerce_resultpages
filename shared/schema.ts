@@ -17,6 +17,7 @@ export const posts = pgTable("posts", {
   userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   title: text("title").notNull(),
   content: text("content").notNull(),
+  week: text("week").notNull(),
   imageUrl: text("image_url").notNull(),
   heartCount: integer("heart_count").default(0).notNull(),
   commentCount: integer("comment_count").default(0).notNull(),
