@@ -1,13 +1,19 @@
-# 결과물 제출 페이지 (Result Submission Page)
+# SPARTA Club - 결과물 제출 페이지
 
 ## 프로젝트 개요
-사용자가 창작 작품을 공유하고 커뮤니티와 소통할 수 있는 포트폴리오 스타일의 커뮤니티 플랫폼입니다.
+순수 React + Vite + Supabase로 구축된 포트폴리오 스타일의 커뮤니티 플랫폼입니다.
+
+## 최근 변경사항 (2025-10-17)
+- ✅ Express 백엔드 제거 → 순수 React SPA로 전환
+- ✅ Supabase 직접 연결 (Auth, Database, Storage)
+- ✅ Google OAuth with Supabase Auth
+- ✅ Vite 개발 서버 (포트 5000)
 
 ## 주요 기능
 
 ### 인증 시스템
-- Google OAuth 로그인/로그아웃
-- 세션 기반 인증 (express-session + passport)
+- **Supabase Auth** - Google OAuth 로그인/로그아웃
+- React Context 기반 인증 상태 관리
 - 인증된 사용자만 글 작성/댓글/좋아요 가능
 
 ### 게시물 관리
@@ -20,7 +26,8 @@
 - "내가 쓴 글" 필터링
 
 ### 이미지 업로드
-- Replit Object Storage 사용
+- **Supabase Storage** 사용
+- post-images 버킷 (Public)
 - 로컬 파일 업로드
 - 이미지 미리보기
 
@@ -31,24 +38,19 @@
 
 ## 기술 스택
 
-### Frontend
-- React + TypeScript
-- Wouter (라우팅)
-- TanStack Query (상태 관리)
-- Shadcn UI (컴포넌트)
-- Tailwind CSS (스타일링)
-- Lucide React (아이콘)
+### Frontend (순수 React SPA)
+- **React 18** + TypeScript
+- **Vite** - 빠른 빌드 도구
+- **Wouter** - 경량 라우팅
+- **TanStack Query** - 서버 상태 관리
+- **Shadcn UI** - UI 컴포넌트
+- **Tailwind CSS** - 스타일링
+- **Lucide React** - 아이콘
 
-### Backend
-- Express.js
-- Passport.js (Google OAuth)
-- Multer (파일 업로드)
-- Drizzle ORM
-- Supabase (PostgreSQL)
-
-### Storage
-- Replit Object Storage (이미지)
-- Supabase (데이터베이스)
+### Backend (Supabase)
+- **Supabase Auth** - Google OAuth
+- **Supabase Database** - PostgreSQL with RLS
+- **Supabase Storage** - 이미지 저장
 
 ## 데이터베이스 스키마
 
@@ -56,52 +58,52 @@
 - id (varchar, UUID)
 - email (varchar, unique)
 - name (varchar)
-- profileImage (varchar, nullable)
+- profile_image (varchar, nullable)
+- google_id (varchar, nullable)
+- created_at (timestamp)
 
 ### posts
 - id (varchar, UUID)
-- userId (varchar, FK -> users.id)
+- user_id (varchar, FK -> users.id)
 - title (varchar)
 - content (text)
-- week (varchar) - 과제 단계 (1주차 과제, 2주차 과제, 3주차 과제)
-- imageUrl (varchar)
-- createdAt (timestamp)
+- week (varchar) - 과제 단계
+- image_url (varchar)
+- heart_count (integer)
+- comment_count (integer)
+- created_at (timestamp)
+- updated_at (timestamp)
 
 ### comments
 - id (varchar, UUID)
-- postId (varchar, FK -> posts.id)
-- userId (varchar, FK -> users.id)
+- post_id (varchar, FK -> posts.id)
+- user_id (varchar, FK -> users.id)
 - content (text)
-- createdAt (timestamp)
+- created_at (timestamp)
 
 ### hearts
 - id (varchar, UUID)
-- postId (varchar, FK -> posts.id)
-- userId (varchar, FK -> users.id)
-- unique(postId, userId)
+- post_id (varchar, FK -> posts.id)
+- user_id (varchar, FK -> users.id)
+- unique(post_id, user_id)
 
-## API 엔드포인트
+## Supabase 설정 필요
 
-### 인증
-- GET `/api/auth/me` - 현재 사용자 정보
-- GET `/api/auth/google` - Google OAuth 시작
-- GET `/api/auth/google/callback` - OAuth 콜백
-- POST `/api/auth/logout` - 로그아웃
+### 환경 변수 (Replit Secrets)
+```
+VITE_SUPABASE_URL=https://your-project.supabase.co
+VITE_SUPABASE_ANON_KEY=your-anon-key
+```
 
-### 게시물
-- GET `/api/posts?sortBy=latest&userId=xxx` - 게시물 목록
-- GET `/api/posts/:id` - 게시물 상세
-- POST `/api/posts` - 게시물 작성 (multipart/form-data)
-- PATCH `/api/posts/:id` - 게시물 수정
-- DELETE `/api/posts/:id` - 게시물 삭제
+### 설정 파일
+- `supabase/schema.sql` - 데이터베이스 스키마 (RLS 포함)
+- `supabase/seed.sql` - 예시 데이터 (8개 게시물)
+- `SETUP.md` - 상세 설정 가이드
 
-### 하트
-- POST `/api/posts/:postId/heart` - 좋아요 토글
-
-### 댓글
-- POST `/api/posts/:postId/comments` - 댓글 작성
-- PATCH `/api/comments/:id` - 댓글 수정
-- DELETE `/api/comments/:id` - 댓글 삭제
+### Storage Bucket
+- 이름: `post-images`
+- 타입: Public
+- Policies 필요 (SETUP.md 참조)
 
 ## 디자인
 - 다크 모드 포트폴리오 스타일
@@ -109,29 +111,26 @@
 - Inter + Noto Sans KR 폰트
 - Dribbble/Behance 스타일 영감
 
-## 환경 변수
-- DATABASE_URL (Supabase)
-- GOOGLE_OAUTH_CLIENT_ID
-- GOOGLE_OAUTH_CLIENT_SECRET
-- SESSION_SECRET
-- DEFAULT_OBJECT_STORAGE_BUCKET_ID
-- PUBLIC_OBJECT_SEARCH_PATHS
-- PRIVATE_OBJECT_DIR
-
 ## 페이지 구성
 - `/` - 홈 (게시물 목록)
 - `/write` - 게시물 작성
 
 ## 주요 컴포넌트
-- Header: SPARTA Club 로고, 정렬 옵션, 프로필 메뉴
-- PostGrid: 게시물 그리드 레이아웃
-- PostCard: 개별 게시물 카드
-- PostDetailModal: 게시물 상세 모달
-- CreatePostForm: 게시물 작성 폼 (제목, 내용, 과제 단계 드롭다운, 이미지 업로드)
-- CommentSection: 댓글 섹션
+- **AuthContext** - Supabase Auth 상태 관리
+- **Header** - 로고, 정렬, 프로필 메뉴
+- **PostGrid** - 게시물 그리드
+- **PostCard** - 개별 게시물 카드
+- **PostDetailModal** - 게시물 상세 모달
+- **CreatePostForm** - 게시물 작성 폼
+
+## Supabase API 함수
+- `lib/supabase.ts` - Supabase 클라이언트
+- `lib/supabase-api.ts` - CRUD 함수
+- `lib/supabase-hooks.ts` - 타입 정의
+- `contexts/AuthContext.tsx` - Auth Provider
 
 ## 예시 데이터
-애플리케이션에는 3개의 예시 게시물이 포함되어 있습니다:
-1. 1주차 과제 - 스파르타 클럽 소개 페이지 제작
-2. 2주차 과제 - To-Do List 앱 개발
-3. 3주차 과제 - 실시간 날씨 정보 앱
+`supabase/seed.sql`에 8개의 예시 게시물 포함:
+- 3명의 사용자
+- 다양한 과제 단계
+- 댓글 및 하트 데이터
