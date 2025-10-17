@@ -3,31 +3,32 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { useLocation } from "wouter";
 import { useMutation } from "@tanstack/react-query";
-import { createPost } from "@/lib/api";
+import { createPost, uploadImage } from "@/lib/supabase-api";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/lib/auth";
-import { useEffect } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import { useEffect, useState } from "react";
 
 export default function Write() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const { data: user } = useAuth();
+  const { user, loading } = useAuth();
+  const [isUploading, setIsUploading] = useState(false);
 
   useEffect(() => {
-    if (user === null) {
+    if (!loading && !user) {
       toast({
         title: "로그인이 필요합니다",
         variant: "destructive",
       });
       setLocation("/");
     }
-  }, [user, setLocation, toast]);
+  }, [user, loading, setLocation, toast]);
 
   const createPostMutation = useMutation({
     mutationFn: createPost,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/posts"] });
+      queryClient.invalidateQueries({ queryKey: ['posts'] });
       toast({
         title: "게시물이 작성되었습니다",
       });
@@ -41,7 +42,7 @@ export default function Write() {
     },
   });
 
-  const handleSubmit = (data: {
+  const handleSubmit = async (data: {
     title: string;
     content: string;
     week: string;
@@ -63,16 +64,29 @@ export default function Write() {
       return;
     }
 
-    const formData = new FormData();
-    formData.append("title", data.title);
-    formData.append("content", data.content);
-    formData.append("week", data.week);
-    formData.append("image", data.image);
+    try {
+      setIsUploading(true);
+      // Upload image first
+      const imageUrl = await uploadImage(data.image);
 
-    createPostMutation.mutate(formData);
+      // Create post with image URL
+      createPostMutation.mutate({
+        title: data.title,
+        content: data.content,
+        week: data.week,
+        image_url: imageUrl,
+      });
+    } catch (error) {
+      toast({
+        title: "이미지 업로드에 실패했습니다",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUploading(false);
+    }
   };
 
-  if (!user) {
+  if (loading || !user) {
     return null;
   }
 

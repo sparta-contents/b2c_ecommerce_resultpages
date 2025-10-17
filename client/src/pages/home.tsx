@@ -4,10 +4,9 @@ import { Header, SortType } from "@/components/Header";
 import { PostGrid } from "@/components/PostGrid";
 import { PostDetailModal } from "@/components/PostDetailModal";
 import { useLocation } from "wouter";
-import { useAuth, useLogout, googleLogin } from "@/lib/auth";
+import { useAuth } from "@/contexts/AuthContext";
 import { queryClient } from "@/lib/queryClient";
-import type { PostWithDetails, PostDetail } from "@/lib/api";
-import { toggleHeart, createComment, deletePost, deleteComment } from "@/lib/api";
+import { getPosts, getPost, toggleHeart, createComment, deletePost, deleteComment } from "@/lib/supabase-api";
 import { useToast } from "@/hooks/use-toast";
 
 export default function Home() {
@@ -17,26 +16,25 @@ export default function Home() {
   const [showMyPosts, setShowMyPosts] = useState(false);
   const { toast } = useToast();
 
-  const { data: user } = useAuth();
-  const logout = useLogout();
+  const { user, signInWithGoogle, signOut } = useAuth();
 
-  const postsUrl = `/api/posts?sortBy=${sortBy}${showMyPosts && user ? `&userId=${user.id}` : ''}`;
-  const { data: posts = [] } = useQuery<PostWithDetails[]>({
-    queryKey: [postsUrl],
-    enabled: true,
+  const { data: posts = [], isLoading: postsLoading } = useQuery({
+    queryKey: ['posts', sortBy, showMyPosts ? user?.id : null],
+    queryFn: () => getPosts(sortBy, showMyPosts && user ? user.id : undefined),
   });
 
-  const { data: selectedPost, refetch: refetchPost } = useQuery<PostDetail>({
-    queryKey: [`/api/posts/${selectedPostId}`],
+  const { data: selectedPost, refetch: refetchPost } = useQuery({
+    queryKey: ['post', selectedPostId],
+    queryFn: () => getPost(selectedPostId!),
     enabled: !!selectedPostId,
   });
 
   const heartMutation = useMutation({
-    mutationFn: (postId: string) => toggleHeart(postId),
+    mutationFn: toggleHeart,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/posts"] });
+      queryClient.invalidateQueries({ queryKey: ['posts'] });
       if (selectedPostId) {
-        refetchPost();
+        queryClient.invalidateQueries({ queryKey: ['post', selectedPostId] });
       }
     },
   });
@@ -45,9 +43,9 @@ export default function Home() {
     mutationFn: ({ postId, content }: { postId: string; content: string }) =>
       createComment(postId, content),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/posts"] });
+      queryClient.invalidateQueries({ queryKey: ['posts'] });
       if (selectedPostId) {
-        refetchPost();
+        queryClient.invalidateQueries({ queryKey: ['post', selectedPostId] });
       }
     },
   });
@@ -55,7 +53,7 @@ export default function Home() {
   const deletePostMutation = useMutation({
     mutationFn: deletePost,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/posts"] });
+      queryClient.invalidateQueries({ queryKey: ['posts'] });
       setSelectedPostId(null);
       toast({
         title: "게시물이 삭제되었습니다",
@@ -66,9 +64,9 @@ export default function Home() {
   const deleteCommentMutation = useMutation({
     mutationFn: deleteComment,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/posts"] });
+      queryClient.invalidateQueries({ queryKey: ['posts'] });
       if (selectedPostId) {
-        refetchPost();
+        queryClient.invalidateQueries({ queryKey: ['post', selectedPostId] });
       }
       toast({
         title: "댓글이 삭제되었습니다",
@@ -80,20 +78,40 @@ export default function Home() {
     setShowMyPosts(!showMyPosts);
   };
 
-  const handleLogout = () => {
-    logout.mutate();
+  const handleLogout = async () => {
+    await signOut();
     setShowMyPosts(false);
   };
+
+  // Convert Supabase post data to component format
+  const formattedPosts = posts.map(post => ({
+    id: post.id,
+    title: post.title,
+    contentPreview: post.content.slice(0, 60) + (post.content.length > 60 ? '...' : ''),
+    imageUrl: post.image_url,
+    week: post.week,
+    author: {
+      name: post.user.name,
+      profileImage: post.user.profile_image || undefined,
+    },
+    heartCount: post.heart_count,
+    commentCount: post.comment_count,
+    createdAt: post.created_at,
+    isLiked: post.hearts?.some(h => h.user_id === user?.id) || false,
+  }));
 
   return (
     <div className="min-h-screen bg-background">
       <Header
         isLoggedIn={!!user}
-        user={user ? { name: user.name, profileImage: user.profileImage || undefined } : undefined}
+        user={user ? { 
+          name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
+          profileImage: user.user_metadata?.avatar_url 
+        } : undefined}
         sortBy={sortBy}
         onSortChange={setSortBy}
         onWriteClick={() => setLocation("/write")}
-        onLoginClick={googleLogin}
+        onLoginClick={signInWithGoogle}
         onLogoutClick={handleLogout}
         onMyPostsClick={handleMyPostsClick}
       />
@@ -101,16 +119,26 @@ export default function Home() {
       <main className="max-w-7xl mx-auto px-4 lg:px-8 py-8">
         {showMyPosts && (
           <div className="mb-6">
-            <h2 className="text-2xl font-semibold">내가 쓴 글</h2>
+            <h2 className="text-2xl font-semibold" data-testid="text-my-posts-title">내가 쓴 글</h2>
           </div>
         )}
-        <PostGrid
-          posts={posts.map(p => ({
-            ...p,
-            contentPreview: p.content.slice(0, 60) + (p.content.length > 60 ? '...' : ''),
-          }))}
-          onPostClick={(id) => setSelectedPostId(id)}
-        />
+        
+        {postsLoading ? (
+          <div className="text-center py-12" data-testid="text-loading">
+            <p className="text-muted-foreground">로딩 중...</p>
+          </div>
+        ) : formattedPosts.length === 0 ? (
+          <div className="text-center py-12" data-testid="text-empty">
+            <p className="text-muted-foreground">
+              {showMyPosts ? "작성한 게시물이 없습니다" : "게시물이 없습니다"}
+            </p>
+          </div>
+        ) : (
+          <PostGrid
+            posts={formattedPosts}
+            onPostClick={(id) => setSelectedPostId(id)}
+          />
+        )}
       </main>
 
       {selectedPost && (
@@ -118,11 +146,27 @@ export default function Home() {
           open={!!selectedPostId}
           onOpenChange={(open) => !open && setSelectedPostId(null)}
           post={{
-            ...selectedPost,
+            id: selectedPost.id,
+            title: selectedPost.title,
+            content: selectedPost.content,
+            imageUrl: selectedPost.image_url,
+            week: selectedPost.week,
             author: {
-              ...selectedPost.author,
-              profileImage: selectedPost.author.profileImage || undefined,
+              name: selectedPost.user.name,
+              profileImage: selectedPost.user.profile_image || undefined,
             },
+            heartCount: selectedPost.heart_count,
+            isLiked: selectedPost.hearts?.some((h: any) => h.user_id === user?.id) || false,
+            isOwn: user?.id === selectedPost.user_id,
+            comments: (selectedPost.comments || []).map((c: any) => ({
+              id: c.id,
+              content: c.content,
+              author: {
+                name: c.user.name,
+                profileImage: c.user.profile_image || undefined,
+              },
+              isOwn: user?.id === c.user_id,
+            })),
           }}
           onEdit={() => {
             setLocation(`/write?edit=${selectedPostId}`);
