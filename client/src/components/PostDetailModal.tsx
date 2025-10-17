@@ -70,7 +70,7 @@ export function PostDetailModal({
               data-testid="img-post-detail"
             />
           </div>
-          <div className="flex flex-col h-full">
+          <div className="flex flex-col h-full overflow-hidden">
             <DialogHeader className="p-6 pb-4 border-b shrink-0">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
@@ -88,7 +88,7 @@ export function PostDetailModal({
               </div>
             </DialogHeader>
 
-            <div className="flex-1 overflow-y-auto p-6 space-y-6 pb-24">
+            <div className="flex-1 overflow-y-auto p-6 space-y-6 min-h-0">
               <div className="space-y-3">
                 <Badge data-testid="badge-week-detail">{post.week}</Badge>
                 <p className="text-sm leading-relaxed" data-testid="text-post-detail-content">{post.content}</p>
