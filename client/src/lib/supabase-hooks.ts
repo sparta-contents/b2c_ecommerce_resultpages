@@ -48,7 +48,6 @@ export type Post = {
   image_url: string;
   heart_count: number;
   comment_count: number;
-  is_deleted: boolean;
   created_at: string;
   updated_at: string;
   user: {
@@ -65,7 +64,6 @@ export type Comment = {
   post_id: string;
   user_id: string;
   content: string;
-  is_deleted: boolean;
   created_at: string;
   user: {
     id: string;

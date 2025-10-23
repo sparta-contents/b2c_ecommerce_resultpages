@@ -3,7 +3,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Heart, MessageCircle, Edit, Trash2, Check, X } from "lucide-react";
+import { Heart, MessageCircle, Edit, Trash2 } from "lucide-react";
 import { useState } from "react";
 
 export interface Comment {
@@ -34,32 +34,22 @@ export interface PostDetailModalProps {
     comments: Comment[];
     isOwn?: boolean;
   };
-  isAdmin?: boolean;
-  isLoading?: boolean;
   onEdit?: () => void;
   onDelete?: () => void;
   onLike?: () => void;
   onCommentSubmit?: (comment: string) => void;
-  onEditComment?: (commentId: string, content: string) => void;
-  onDeleteComment?: (commentId: string) => void;
 }
 
 export function PostDetailModal({
   open,
   onOpenChange,
   post,
-  isAdmin = false,
-  isLoading = false,
   onEdit,
   onDelete,
   onLike,
   onCommentSubmit,
-  onEditComment,
-  onDeleteComment,
 }: PostDetailModalProps) {
   const [newComment, setNewComment] = useState("");
-  const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
-  const [editingContent, setEditingContent] = useState("");
 
   const handleCommentSubmit = () => {
     if (newComment.trim() && onCommentSubmit) {
@@ -68,41 +58,17 @@ export function PostDetailModal({
     }
   };
 
-  const handleEditComment = (commentId: string, content: string) => {
-    setEditingCommentId(commentId);
-    setEditingContent(content);
-  };
-
-  const handleSaveEdit = () => {
-    if (editingContent.trim() && editingCommentId && onEditComment) {
-      onEditComment(editingCommentId, editingContent);
-      setEditingCommentId(null);
-      setEditingContent("");
-    }
-  };
-
-  const handleCancelEdit = () => {
-    setEditingCommentId(null);
-    setEditingContent("");
-  };
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl w-[90vw] h-[85vh] p-0 gap-0" data-testid="modal-post-detail" aria-describedby={undefined}>
+      <DialogContent className="max-w-5xl w-[90vw] h-[85vh] p-0 gap-0" data-testid="modal-post-detail">
         <div className="grid md:grid-cols-[60%_40%] h-full">
           <div className="bg-muted flex items-center justify-center relative h-full">
-            {isLoading ? (
-              <div className="flex items-center justify-center w-full h-full">
-                <div className="text-muted-foreground">이미지 로딩 중...</div>
-              </div>
-            ) : (
-              <img
-                src={post.imageUrl}
-                alt={post.title}
-                className="max-w-full max-h-full object-contain"
-                data-testid="img-post-detail"
-              />
-            )}
+            <img
+              src={post.imageUrl}
+              alt={post.title}
+              className="max-w-full max-h-full object-contain"
+              data-testid="img-post-detail"
+            />
           </div>
           <div className="flex flex-col h-full overflow-hidden">
             <DialogHeader className="p-6 pb-4 border-b shrink-0">
@@ -125,7 +91,7 @@ export function PostDetailModal({
             <div className="flex-1 overflow-y-auto p-6 space-y-6 min-h-0">
               <div className="space-y-3">
                 <Badge data-testid="badge-week-detail">{post.week}</Badge>
-                <p className="text-sm leading-relaxed whitespace-pre-line" data-testid="text-post-detail-content">{post.content}</p>
+                <p className="text-sm leading-relaxed" data-testid="text-post-detail-content">{post.content}</p>
               </div>
 
               <div className="flex items-center gap-4">
@@ -145,25 +111,16 @@ export function PostDetailModal({
                 </div>
               </div>
 
-              {(post.isOwn || isAdmin) && (
+              {post.isOwn && (
                 <div className="flex gap-2 pt-2 border-t">
-                  {(post.isOwn || isAdmin) && onEdit && (
-                    <Button variant="outline" size="sm" onClick={onEdit} data-testid="button-edit">
-                      <Edit className="h-4 w-4 mr-2" />
-                      수정
-                    </Button>
-                  )}
-                  {(post.isOwn || isAdmin) && onDelete && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={onDelete}
-                      data-testid="button-delete"
-                    >
-                      <Trash2 className="h-4 w-4 mr-2" />
-                      삭제
-                    </Button>
-                  )}
+                  <Button variant="outline" size="sm" onClick={onEdit} data-testid="button-edit">
+                    <Edit className="h-4 w-4 mr-2" />
+                    수정
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={onDelete} data-testid="button-delete">
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    삭제
+                  </Button>
                 </div>
               )}
 
@@ -178,64 +135,18 @@ export function PostDetailModal({
                     <div className="flex-1 space-y-1">
                       <div className="flex items-center justify-between">
                         <p className="text-sm font-medium" data-testid="text-comment-author">{comment.author.name}</p>
-                        {(comment.isOwn || isAdmin) && (
+                        {comment.isOwn && (
                           <div className="flex gap-1">
-                            {editingCommentId !== comment.id && (comment.isOwn || isAdmin) && onEditComment && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-6 px-2"
-                                onClick={() => handleEditComment(comment.id, comment.content)}
-                                data-testid={`button-edit-comment-${comment.id}`}
-                              >
-                                <Edit className="h-3 w-3" />
-                              </Button>
-                            )}
-                            {editingCommentId !== comment.id && (comment.isOwn || isAdmin) && onDeleteComment && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-6 px-2 hover:text-destructive"
-                                onClick={() => onDeleteComment(comment.id)}
-                                data-testid={`button-delete-comment-${comment.id}`}
-                              >
-                                <Trash2 className="h-3 w-3" />
-                              </Button>
-                            )}
+                            <Button variant="ghost" size="sm" className="h-6 px-2" data-testid={`button-edit-comment-${comment.id}`}>
+                              <Edit className="h-3 w-3" />
+                            </Button>
+                            <Button variant="ghost" size="sm" className="h-6 px-2" data-testid={`button-delete-comment-${comment.id}`}>
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
                           </div>
                         )}
                       </div>
-                      {editingCommentId === comment.id ? (
-                        <div className="space-y-2">
-                          <Textarea
-                            value={editingContent}
-                            onChange={(e) => setEditingContent(e.target.value)}
-                            className="min-h-[60px] resize-none text-sm"
-                            data-testid={`input-edit-comment-${comment.id}`}
-                          />
-                          <div className="flex gap-2">
-                            <Button
-                              size="sm"
-                              onClick={handleSaveEdit}
-                              data-testid={`button-save-comment-${comment.id}`}
-                            >
-                              <Check className="h-3 w-3 mr-1" />
-                              저장
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={handleCancelEdit}
-                              data-testid={`button-cancel-comment-${comment.id}`}
-                            >
-                              <X className="h-3 w-3 mr-1" />
-                              취소
-                            </Button>
-                          </div>
-                        </div>
-                      ) : (
-                        <p className="text-sm text-muted-foreground" data-testid="text-comment-content">{comment.content}</p>
-                      )}
+                      <p className="text-sm text-muted-foreground" data-testid="text-comment-content">{comment.content}</p>
                     </div>
                   </div>
                 ))}

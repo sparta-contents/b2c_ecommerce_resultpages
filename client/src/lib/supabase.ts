@@ -3,22 +3,15 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-// 환경 변수가 없으면 더미 값으로 초기화 (개발용)
-const finalSupabaseUrl = supabaseUrl || 'https://dummy.supabase.co';
-const finalSupabaseAnonKey = supabaseAnonKey || 'dummy_key';
-
 if (!supabaseUrl || !supabaseAnonKey) {
-  console.warn('Supabase environment variables not found. Using dummy values.');
+  throw new Error('Missing Supabase environment variables');
 }
 
-export const supabase = createClient(finalSupabaseUrl, finalSupabaseAnonKey, {
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     persistSession: true,
     autoRefreshToken: true,
     detectSessionInUrl: true,
-    storage: window.localStorage,
-    storageKey: 'sb-auth-token',
-    flowType: 'pkce',
   },
 });
 
@@ -32,7 +25,6 @@ export type Database = {
           name: string;
           profile_image: string | null;
           google_id: string | null;
-          role: string;
           created_at: string;
         };
         Insert: {
@@ -41,7 +33,6 @@ export type Database = {
           name: string;
           profile_image?: string | null;
           google_id?: string | null;
-          role?: string;
           created_at?: string;
         };
         Update: {
@@ -50,7 +41,6 @@ export type Database = {
           name?: string;
           profile_image?: string | null;
           google_id?: string | null;
-          role?: string;
           created_at?: string;
         };
       };
@@ -64,7 +54,6 @@ export type Database = {
           image_url: string;
           heart_count: number;
           comment_count: number;
-          is_deleted: boolean;
           created_at: string;
           updated_at: string;
         };
@@ -77,7 +66,6 @@ export type Database = {
           image_url: string;
           heart_count?: number;
           comment_count?: number;
-          is_deleted?: boolean;
           created_at?: string;
           updated_at?: string;
         };
@@ -90,7 +78,6 @@ export type Database = {
           image_url?: string;
           heart_count?: number;
           comment_count?: number;
-          is_deleted?: boolean;
           created_at?: string;
           updated_at?: string;
         };
@@ -101,7 +88,6 @@ export type Database = {
           post_id: string;
           user_id: string;
           content: string;
-          is_deleted: boolean;
           created_at: string;
         };
         Insert: {
@@ -109,7 +95,6 @@ export type Database = {
           post_id: string;
           user_id: string;
           content: string;
-          is_deleted?: boolean;
           created_at?: string;
         };
         Update: {
@@ -117,7 +102,6 @@ export type Database = {
           post_id?: string;
           user_id?: string;
           content?: string;
-          is_deleted?: boolean;
           created_at?: string;
         };
       };
