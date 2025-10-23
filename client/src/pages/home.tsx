@@ -137,8 +137,36 @@ export default function Home() {
 
   const heartMutation = useMutation({
     mutationFn: toggleHeart,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['posts'] });
+    onSuccess: (_, postId) => {
+      // Update infinite query cache
+      queryClient.setQueryData(
+        ['posts', sortBy, showMyPosts ? user?.id : null],
+        (oldData: any) => {
+          if (!oldData) return oldData;
+
+          return {
+            ...oldData,
+            pages: oldData.pages.map((page: any) => ({
+              ...page,
+              posts: page.posts.map((post: any) => {
+                if (post.id === postId) {
+                  const isCurrentlyLiked = post.hearts?.some((h: any) => h.user_id === user?.id);
+                  return {
+                    ...post,
+                    heart_count: isCurrentlyLiked ? post.heart_count - 1 : post.heart_count + 1,
+                    hearts: isCurrentlyLiked
+                      ? post.hearts.filter((h: any) => h.user_id !== user?.id)
+                      : [...(post.hearts || []), { user_id: user?.id }]
+                  };
+                }
+                return post;
+              })
+            }))
+          };
+        }
+      );
+
+      // Update single post cache if modal is open
       if (selectedPostId) {
         queryClient.invalidateQueries({ queryKey: ['post', selectedPostId] });
       }
