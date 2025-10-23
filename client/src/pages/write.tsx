@@ -15,15 +15,7 @@ export default function Write() {
   const { user, loading } = useAuth();
   const [isUploading, setIsUploading] = useState(false);
 
-  useEffect(() => {
-    if (!loading && !user) {
-      toast({
-        title: "로그인이 필요합니다",
-        variant: "destructive",
-      });
-      setLocation("/");
-    }
-  }, [user, loading, setLocation, toast]);
+  console.log('Write page - loading:', loading, 'user:', user?.id, 'email:', user?.email);
 
   const createPostMutation = useMutation({
     mutationFn: createPost,
@@ -48,6 +40,8 @@ export default function Write() {
     week: string;
     image: File | null;
   }) => {
+    console.log('Submit data:', data);
+
     if (!data.image) {
       toast({
         title: "이미지를 선택해주세요",
@@ -66,8 +60,11 @@ export default function Write() {
 
     try {
       setIsUploading(true);
+      console.log('Uploading image...');
+
       // Upload image first
       const imageUrl = await uploadImage(data.image);
+      console.log('Image uploaded:', imageUrl);
 
       // Create post with image URL
       createPostMutation.mutate({
@@ -77,8 +74,10 @@ export default function Write() {
         image_url: imageUrl,
       });
     } catch (error) {
+      console.error('Upload error:', error);
       toast({
         title: "이미지 업로드에 실패했습니다",
+        description: error instanceof Error ? error.message : "알 수 없는 오류",
         variant: "destructive",
       });
     } finally {
@@ -86,8 +85,21 @@ export default function Write() {
     }
   };
 
-  if (loading || !user) {
-    return null;
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <p className="text-muted-foreground">로딩 중...</p>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4">
+        <p className="text-muted-foreground text-lg">로그인이 필요합니다</p>
+        <Button onClick={() => setLocation("/")}>홈으로 돌아가기</Button>
+      </div>
+    );
   }
 
   return (
@@ -113,10 +125,16 @@ export default function Write() {
             작품을 공유하고 커뮤니티와 소통하세요
           </p>
         </div>
-        <CreatePostForm
-          onSubmit={handleSubmit}
-          onCancel={() => setLocation("/")}
-        />
+        {isUploading ? (
+          <div className="flex items-center justify-center py-12">
+            <p className="text-muted-foreground">이미지 업로드 중...</p>
+          </div>
+        ) : (
+          <CreatePostForm
+            onSubmit={handleSubmit}
+            onCancel={() => setLocation("/")}
+          />
+        )}
       </main>
     </div>
   );

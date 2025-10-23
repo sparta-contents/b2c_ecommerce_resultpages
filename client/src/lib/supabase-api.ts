@@ -2,6 +2,8 @@ import { supabase } from './supabase';
 import type { Post, Comment } from './supabase-hooks';
 
 export async function getPosts(sortBy: 'latest' | 'popular' = 'latest', userId?: string) {
+  console.log('getPosts 호출됨, sortBy:', sortBy, 'userId:', userId);
+
   let query = supabase
     .from('posts')
     .select(`
@@ -22,8 +24,18 @@ export async function getPosts(sortBy: 'latest' | 'popular' = 'latest', userId?:
 
   const { data, error } = await query;
 
-  if (error) throw error;
-  return data as Post[];
+  console.log('getPosts 결과 - data:', data, 'error:', error);
+
+  if (error) {
+    console.error('getPosts 에러:', error);
+    throw error;
+  }
+
+  // Filter out deleted posts on client side (handles both false and null)
+  const filteredData = (data || []).filter((post: any) => !post.is_deleted);
+  console.log('필터링된 데이터:', filteredData);
+
+  return filteredData as Post[];
 }
 
 export async function getPost(id: string) {
@@ -38,6 +50,7 @@ export async function getPost(id: string) {
         content,
         created_at,
         user_id,
+        is_deleted,
         user:users!comments_user_id_fkey(id, name, profile_image)
       )
     `)
@@ -45,6 +58,17 @@ export async function getPost(id: string) {
     .single();
 
   if (error) throw error;
+
+  // Check if post is deleted
+  if (data && data.is_deleted) {
+    throw new Error('Post not found');
+  }
+
+  // Filter deleted comments on client side
+  if (data && data.comments) {
+    data.comments = data.comments.filter((c: any) => !c.is_deleted);
+  }
+
   return data;
 }
 
@@ -87,6 +111,27 @@ export async function updatePost(id: string, data: {
   return post;
 }
 
+// Soft delete for regular users
+export async function softDeletePost(id: string) {
+  console.log('softDeletePost 호출됨, id:', id);
+
+  const { data, error } = await supabase
+    .from('posts')
+    .update({ is_deleted: true })
+    .eq('id', id)
+    .select();
+
+  console.log('softDeletePost 결과 - data:', data, 'error:', error);
+
+  if (error) {
+    console.error('softDeletePost 에러:', error);
+    throw error;
+  }
+
+  return data;
+}
+
+// Hard delete for admins only
 export async function deletePost(id: string) {
   const { error } = await supabase
     .from('posts')
@@ -187,6 +232,57 @@ export async function createComment(postId: string, content: string) {
   return comment;
 }
 
+export async function updateComment(commentId: string, content: string) {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Not authenticated');
+
+  const { data: comment, error } = await supabase
+    .from('comments')
+    .update({ content })
+    .eq('id', commentId)
+    .select(`
+      *,
+      user:users!comments_user_id_fkey(id, name, profile_image)
+    `)
+    .single();
+
+  if (error) throw error;
+  return comment;
+}
+
+// Soft delete for regular users
+export async function softDeleteComment(commentId: string) {
+  const { data: comment } = await supabase
+    .from('comments')
+    .select('post_id')
+    .eq('id', commentId)
+    .single();
+
+  const { error } = await supabase
+    .from('comments')
+    .update({ is_deleted: true })
+    .eq('id', commentId);
+
+  if (error) throw error;
+
+  // Decrement comment count
+  if (comment) {
+    const { data: post } = await supabase
+      .from('posts')
+      .select('comment_count')
+      .eq('id', comment.post_id)
+      .single();
+
+    if (post) {
+      await supabase
+        .from('posts')
+        .update({ comment_count: Math.max(0, post.comment_count - 1) })
+        .eq('id', comment.post_id);
+    }
+  }
+}
+
+// Hard delete for admins only
 export async function deleteComment(commentId: string) {
   const { data: comment } = await supabase
     .from('comments')

@@ -1,6 +1,36 @@
+# Dependencies
 node_modules
 dist
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# OS files
 .DS_Store
+Thumbs.db
+
+# Build output
 server/public
-vite.config.ts.*
+
+# Temporary files
 *.tar.gz
+*.log
+nul
+
+# Local state
+.local
+.replit
+.claude
+
+# Python (if accidentally added)
+*.pyc
+__pycache__
+pyproject.toml
+uv.lock
+
+# Database
+drizzle
+*.db
+*.sqlite
