@@ -14,7 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { PenSquare, LogOut, User } from "lucide-react";
+import { PenSquare, LogOut, User, Shield } from "lucide-react";
 import { ThemeToggle } from "./ThemeToggle";
 import logoImage from "@assets/image_1760699207937.png";
 
@@ -22,6 +22,7 @@ export type SortType = "latest" | "popular";
 
 export interface HeaderProps {
   isLoggedIn?: boolean;
+  isAdmin?: boolean;
   user?: {
     name: string;
     profileImage?: string;
@@ -32,10 +33,13 @@ export interface HeaderProps {
   onLoginClick: () => void;
   onLogoutClick: () => void;
   onMyPostsClick: () => void;
+  onAdminClick?: () => void;
+  onLogoClick?: () => void;
 }
 
 export function Header({
   isLoggedIn = false,
+  isAdmin = false,
   user,
   sortBy,
   onSortChange,
@@ -43,12 +47,22 @@ export function Header({
   onLoginClick,
   onLogoutClick,
   onMyPostsClick,
+  onAdminClick,
+  onLogoClick,
 }: HeaderProps) {
+  console.log('Header rendered:', { isLoggedIn, isAdmin, userName: user?.name });
+
   return (
     <header className="sticky top-0 z-50 backdrop-blur-md bg-background/80 border-b">
       <div className="max-w-7xl mx-auto px-4 lg:px-8 h-16 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <img src={logoImage} alt="SPARTA Club" className="h-8" data-testid="img-logo" />
+          <img
+            src={logoImage}
+            alt="SPARTA Club"
+            className="h-8 cursor-pointer"
+            data-testid="img-logo"
+            onClick={onLogoClick}
+          />
         </div>
 
         <div className="flex items-center gap-3">
@@ -62,12 +76,16 @@ export function Header({
             </SelectContent>
           </Select>
 
-          {isLoggedIn && (
-            <Button onClick={onWriteClick} data-testid="button-write">
-              <PenSquare className="h-4 w-4 mr-2" />
-              글쓰기
-            </Button>
-          )}
+          <Button
+            onClick={() => {
+              console.log('글쓰기 버튼 클릭됨');
+              onWriteClick();
+            }}
+            data-testid="button-write"
+          >
+            <PenSquare className="h-4 w-4 mr-2" />
+            글쓰기
+          </Button>
 
           <ThemeToggle />
 
@@ -86,8 +104,24 @@ export function Header({
                   <User className="h-4 w-4 mr-2" />
                   내가 쓴 글
                 </DropdownMenuItem>
+                {isAdmin && onAdminClick && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={onAdminClick} data-testid="menu-admin">
+                      <Shield className="h-4 w-4 mr-2" />
+                      관리자 대시보드
+                    </DropdownMenuItem>
+                  </>
+                )}
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={onLogoutClick} data-testid="menu-logout">
+                <DropdownMenuItem
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onLogoutClick();
+                  }}
+                  data-testid="menu-logout"
+                >
                   <LogOut className="h-4 w-4 mr-2" />
                   로그아웃
                 </DropdownMenuItem>
