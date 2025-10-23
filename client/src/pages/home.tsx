@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { useInfiniteQuery, useQuery, useMutation } from "@tanstack/react-query";
 import { Header, SortType } from "@/components/Header";
 import { PostGrid } from "@/components/PostGrid";
 import { PostDetailModal } from "@/components/PostDetailModal";
@@ -21,13 +21,39 @@ export default function Home() {
 
   const { user, loading, isAdmin, signInWithGoogle, signOut } = useAuth();
 
+  // Infinite scroll observer ref
+  const observerRef = useRef<IntersectionObserver | null>(null);
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
+
   // Hooks must be called before any conditional returns
-  const { data: posts = [], isLoading: postsLoading, error: postsError } = useQuery({
+  const {
+    data,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    isLoading: postsLoading,
+    error: postsError
+  } = useInfiniteQuery({
     queryKey: ['posts', sortBy, showMyPosts ? user?.id : null],
-    queryFn: () => getPosts(sortBy, showMyPosts && user ? user.id : undefined),
+    queryFn: ({ pageParam = 0 }) => {
+      const limit = pageParam === 0 ? 100 : 30; // First page: 100, subsequent: 30
+      return getPosts(sortBy, showMyPosts && user ? user.id : undefined, limit, pageParam);
+    },
+    getNextPageParam: (lastPage, allPages) => {
+      const loadedCount = allPages.reduce((sum, page) => sum + page.posts.length, 0);
+      if (loadedCount >= lastPage.total) {
+        return undefined; // No more pages
+      }
+      return loadedCount; // Return the offset for next page
+    },
+    initialPageParam: 0,
     retry: 1,
-    // Always fetch posts - they are public
+    staleTime: 1000 * 60 * 5, // 5 minutes - cache data to improve performance
+    gcTime: 1000 * 60 * 10, // 10 minutes - keep unused data in cache
   });
+
+  // Flatten all posts from pages
+  const posts = data?.pages.flatMap(page => page.posts) || [];
 
   // 게시글 로딩 에러 처리
   useEffect(() => {
@@ -49,8 +75,37 @@ export default function Home() {
       postsLoading,
       hasError: !!postsError,
       authLoading: loading,
+      hasNextPage,
+      isFetchingNextPage,
     });
-  }, [posts, postsLoading, postsError, loading]);
+  }, [posts, postsLoading, postsError, loading, hasNextPage, isFetchingNextPage]);
+
+  // Infinite scroll implementation using Intersection Observer
+  useEffect(() => {
+    if (postsLoading || !hasNextPage || isFetchingNextPage) return;
+
+    const currentLoadMoreRef = loadMoreRef.current;
+
+    observerRef.current = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasNextPage && !isFetchingNextPage) {
+          console.log('Loading more posts...');
+          fetchNextPage();
+        }
+      },
+      { threshold: 0.1, rootMargin: '100px' }
+    );
+
+    if (currentLoadMoreRef) {
+      observerRef.current.observe(currentLoadMoreRef);
+    }
+
+    return () => {
+      if (observerRef.current && currentLoadMoreRef) {
+        observerRef.current.unobserve(currentLoadMoreRef);
+      }
+    };
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage, postsLoading]);
 
   const { data: selectedPost, refetch: refetchPost, isLoading: selectedPostLoading } = useQuery({
     queryKey: ['post', selectedPostId],
@@ -253,13 +308,32 @@ export default function Home() {
             </p>
           </div>
         ) : (
-          <PostGrid
-            posts={formattedPosts}
-            onPostClick={(id) => {
-              console.log('게시글 클릭됨, id:', id);
-              setSelectedPostId(id);
-            }}
-          />
+          <>
+            <PostGrid
+              posts={formattedPosts}
+              onPostClick={(id) => {
+                console.log('게시글 클릭됨, id:', id);
+                setSelectedPostId(id);
+              }}
+            />
+
+            {/* Infinite scroll trigger */}
+            {hasNextPage && (
+              <div ref={loadMoreRef} className="text-center py-8">
+                {isFetchingNextPage ? (
+                  <p className="text-muted-foreground">더 많은 게시글을 불러오는 중...</p>
+                ) : (
+                  <p className="text-muted-foreground text-sm">스크롤하여 더 보기</p>
+                )}
+              </div>
+            )}
+
+            {!hasNextPage && posts.length > 0 && (
+              <div className="text-center py-8">
+                <p className="text-muted-foreground text-sm">모든 게시글을 불러왔습니다</p>
+              </div>
+            )}
+          </>
         )}
       </main>
 

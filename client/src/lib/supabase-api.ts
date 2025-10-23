@@ -1,8 +1,13 @@
 import { supabase } from './supabase';
 import type { Post, Comment } from './supabase-hooks';
 
-export async function getPosts(sortBy: 'latest' | 'popular' = 'latest', userId?: string) {
-  console.log('getPosts 호출됨, sortBy:', sortBy, 'userId:', userId);
+export async function getPosts(
+  sortBy: 'latest' | 'popular' = 'latest',
+  userId?: string,
+  limit: number = 100,
+  offset: number = 0
+) {
+  console.log('getPosts 호출됨, sortBy:', sortBy, 'userId:', userId, 'limit:', limit, 'offset:', offset);
 
   let query = supabase
     .from('posts')
@@ -10,11 +15,14 @@ export async function getPosts(sortBy: 'latest' | 'popular' = 'latest', userId?:
       *,
       user:users!posts_user_id_fkey(id, name, email, profile_image),
       hearts(user_id)
-    `);
+    `, { count: 'exact' });
 
   if (userId) {
     query = query.eq('user_id', userId);
   }
+
+  // Filter out deleted posts at query level
+  query = query.eq('is_deleted', false);
 
   if (sortBy === 'popular') {
     query = query.order('heart_count', { ascending: false });
@@ -22,20 +30,22 @@ export async function getPosts(sortBy: 'latest' | 'popular' = 'latest', userId?:
     query = query.order('created_at', { ascending: false });
   }
 
-  const { data, error } = await query;
+  // Add pagination
+  query = query.range(offset, offset + limit - 1);
 
-  console.log('getPosts 결과 - data:', data, 'error:', error);
+  const { data, error, count } = await query;
+
+  console.log('getPosts 결과 - data count:', data?.length, 'total:', count, 'error:', error);
 
   if (error) {
     console.error('getPosts 에러:', error);
     throw error;
   }
 
-  // Filter out deleted posts on client side (handles both false and null)
-  const filteredData = (data || []).filter((post: any) => !post.is_deleted);
-  console.log('필터링된 데이터:', filteredData);
-
-  return filteredData as Post[];
+  return {
+    posts: (data || []) as Post[],
+    total: count || 0
+  };
 }
 
 export async function getPost(id: string) {

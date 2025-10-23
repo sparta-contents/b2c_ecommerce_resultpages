@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -22,7 +23,7 @@ export interface PostCardProps {
   onDelete?: (e: React.MouseEvent) => void;
 }
 
-export function PostCard({
+export const PostCard = memo(function PostCard({
   imageUrl,
   title,
   week,
@@ -49,6 +50,8 @@ export function PostCard({
           src={imageUrl}
           alt={title}
           className="w-full h-full object-cover"
+          loading="lazy"
+          decoding="async"
         />
         {isAdmin && (
           <div className="absolute top-2 right-2 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -115,4 +118,4 @@ export function PostCard({
       </div>
     </Card>
   );
-}
+});
