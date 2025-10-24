@@ -5,9 +5,10 @@ export async function getPosts(
   sortBy: 'latest' | 'popular' = 'latest',
   userId?: string,
   limit: number = 100,
-  offset: number = 0
+  offset: number = 0,
+  weekFilter?: string
 ) {
-  console.log('getPosts 호출됨, sortBy:', sortBy, 'userId:', userId, 'limit:', limit, 'offset:', offset);
+  console.log('getPosts 호출됨, sortBy:', sortBy, 'userId:', userId, 'limit:', limit, 'offset:', offset, 'weekFilter:', weekFilter);
 
   let query = supabase
     .from('posts')
@@ -23,6 +24,11 @@ export async function getPosts(
 
   // Filter out deleted posts at query level
   query = query.eq('is_deleted', false);
+
+  // Filter by week if provided
+  if (weekFilter) {
+    query = query.eq('week', weekFilter);
+  }
 
   if (sortBy === 'popular') {
     query = query.order('heart_count', { ascending: false });
@@ -342,4 +348,72 @@ export async function uploadImage(file: File): Promise<string> {
     .getPublicUrl(fileName);
 
   return data.publicUrl;
+}
+
+// Admin Statistics
+export async function getWeeklyPostStats() {
+  const { data, error } = await supabase
+    .from('posts')
+    .select('created_at, week')
+    .eq('is_deleted', false)
+    .order('created_at', { ascending: true });
+
+  if (error) throw error;
+
+  // Initialize last 30 days with 0 counts (daily basis)
+  const now = new Date();
+  now.setHours(0, 0, 0, 0); // Reset to start of day
+  const dailyStats: { [key: string]: number } = {};
+
+  // Create all 30 days with 0 count
+  for (let i = 29; i >= 0; i--) {
+    const date = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
+    const dateKey = date.toISOString().split('T')[0];
+    dailyStats[dateKey] = 0;
+  }
+
+  // Count posts per day
+  const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+  data?.forEach((post: any) => {
+    const createdDate = new Date(post.created_at);
+    createdDate.setHours(0, 0, 0, 0); // Reset to start of day
+
+    if (createdDate >= thirtyDaysAgo) {
+      const dateKey = createdDate.toISOString().split('T')[0];
+
+      if (dailyStats.hasOwnProperty(dateKey)) {
+        dailyStats[dateKey] = dailyStats[dateKey] + 1;
+      }
+    }
+  });
+
+  // Convert to array and sort
+  return Object.entries(dailyStats)
+    .map(([week, count]) => ({ week, count }))
+    .sort((a, b) => a.week.localeCompare(b.week));
+}
+
+export async function getWeekFilterStats() {
+  const { data, error } = await supabase
+    .from('posts')
+    .select('week')
+    .eq('is_deleted', false);
+
+  if (error) throw error;
+
+  // Count by week filter
+  const weekStats: { [key: string]: number } = {
+    '1주차 과제': 0,
+    '2주차 과제': 0,
+    '3주차 과제': 0,
+  };
+
+  data?.forEach((post: any) => {
+    if (weekStats[post.week] !== undefined) {
+      weekStats[post.week]++;
+    }
+  });
+
+  return Object.entries(weekStats).map(([week, count]) => ({ week, count }));
 }

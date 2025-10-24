@@ -93,6 +93,9 @@ export function CreatePostForm({ onSubmit, onCancel, initialData }: CreatePostFo
             <SelectItem value="1주차 과제" data-testid="option-week1">1주차 과제</SelectItem>
             <SelectItem value="2주차 과제" data-testid="option-week2">2주차 과제</SelectItem>
             <SelectItem value="3주차 과제" data-testid="option-week3">3주차 과제</SelectItem>
+            <SelectItem value="4주차 과제" data-testid="option-week4">4주차 과제</SelectItem>
+            <SelectItem value="5주차 과제" data-testid="option-week5">5주차 과제</SelectItem>
+            <SelectItem value="6주차 과제" data-testid="option-week6">6주차 과제</SelectItem>
           </SelectContent>
         </Select>
       </div>

@@ -7,7 +7,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { Users, FileText, MessageCircle, Heart } from "lucide-react";
 import { PostDetailModal } from "@/components/PostDetailModal";
-import { getPost, toggleHeart, createComment, updateComment, softDeletePost, softDeleteComment } from "@/lib/supabase-api";
+import { WeeklyPostsChart } from "@/components/WeeklyPostsChart";
+import { WeekFilterChart } from "@/components/WeekFilterChart";
+import { getPost, toggleHeart, createComment, updateComment, softDeletePost, softDeleteComment, getWeeklyPostStats, getWeekFilterStats } from "@/lib/supabase-api";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
@@ -16,12 +18,6 @@ export default function Admin() {
   const { user, isAdmin } = useAuth();
   const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
   const { toast } = useToast();
-
-  // Redirect if not admin
-  if (!isAdmin) {
-    setLocation("/");
-    return null;
-  }
 
   const { data: stats, isLoading } = useQuery({
     queryKey: ['admin-stats'],
@@ -53,6 +49,11 @@ export default function Admin() {
 
       return data || [];
     },
+  });
+
+  const { data: weeklyStats } = useQuery({
+    queryKey: ['weekly-post-stats'],
+    queryFn: getWeeklyPostStats,
   });
 
   const { data: selectedPost } = useQuery({
@@ -121,6 +122,12 @@ export default function Admin() {
     },
   });
 
+  // Redirect if not admin
+  if (!isAdmin) {
+    setLocation("/");
+    return null;
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b">
@@ -183,6 +190,11 @@ export default function Admin() {
                 </CardContent>
               </Card>
             </div>
+
+            {/* Weekly Posts Chart */}
+            {weeklyStats && weeklyStats.length > 0 && (
+              <WeeklyPostsChart data={weeklyStats} />
+            )}
 
             {/* Recent Posts */}
             <Card>

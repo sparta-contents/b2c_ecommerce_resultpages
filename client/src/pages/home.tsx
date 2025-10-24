@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useInfiniteQuery, useQuery, useMutation } from "@tanstack/react-query";
-import { Header, SortType } from "@/components/Header";
+import { Header, SortType, WeekFilter } from "@/components/Header";
 import { PostGrid } from "@/components/PostGrid";
 import { PostDetailModal } from "@/components/PostDetailModal";
 import { CreatePostModal } from "@/components/CreatePostModal";
@@ -13,6 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 export default function Home() {
   const [, setLocation] = useLocation();
   const [sortBy, setSortBy] = useState<SortType>("latest");
+  const [weekFilter, setWeekFilter] = useState<WeekFilter>("all");
   const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
   const [showMyPosts, setShowMyPosts] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -34,10 +35,10 @@ export default function Home() {
     isLoading: postsLoading,
     error: postsError
   } = useInfiniteQuery({
-    queryKey: ['posts', sortBy, showMyPosts ? user?.id : null],
+    queryKey: ['posts', sortBy, weekFilter, showMyPosts ? user?.id : null],
     queryFn: ({ pageParam = 0 }) => {
       const limit = pageParam === 0 ? 100 : 30; // First page: 100, subsequent: 30
-      return getPosts(sortBy, showMyPosts && user ? user.id : undefined, limit, pageParam);
+      return getPosts(sortBy, showMyPosts && user ? user.id : undefined, limit, pageParam, weekFilter !== 'all' ? weekFilter : undefined);
     },
     getNextPageParam: (lastPage, allPages) => {
       const loadedCount = allPages.reduce((sum, page) => sum + page.posts.length, 0);
@@ -140,7 +141,7 @@ export default function Home() {
     onSuccess: (_, postId) => {
       // Update infinite query cache
       queryClient.setQueryData(
-        ['posts', sortBy, showMyPosts ? user?.id : null],
+        ['posts', sortBy, weekFilter, showMyPosts ? user?.id : null],
         (oldData: any) => {
           if (!oldData) return oldData;
 
@@ -292,7 +293,9 @@ export default function Home() {
           profileImage: user.user_metadata?.avatar_url
         } : undefined}
         sortBy={sortBy}
+        weekFilter={weekFilter}
         onSortChange={setSortBy}
+        onWeekFilterChange={setWeekFilter}
         onWriteClick={() => {
           if (!user) {
             toast({
