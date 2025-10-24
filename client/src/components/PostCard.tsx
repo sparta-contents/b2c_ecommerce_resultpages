@@ -17,7 +17,9 @@ export interface PostCardProps {
   contentPreview: string;
   heartCount: number;
   commentCount: number;
+  isLiked?: boolean;
   onClick?: () => void;
+  onLike?: (e: React.MouseEvent) => void;
   isAdmin?: boolean;
   onEdit?: (e: React.MouseEvent) => void;
   onDelete?: (e: React.MouseEvent) => void;
@@ -31,7 +33,9 @@ export const PostCard = memo(function PostCard({
   contentPreview,
   heartCount,
   commentCount,
+  isLiked = false,
   onClick,
+  onLike,
   isAdmin = false,
   onEdit,
   onDelete,
@@ -106,10 +110,20 @@ export const PostCard = memo(function PostCard({
           {contentPreview}
         </p>
         <div className="flex items-center gap-4 pt-2">
-          <div className="flex items-center gap-1 text-muted-foreground">
-            <Heart className="h-4 w-4" />
+          <button
+            className={`flex items-center gap-1 transition-colors ${
+              isLiked ? 'text-red-500' : 'text-muted-foreground hover:text-red-500'
+            }`}
+            onClick={(e) => {
+              e.stopPropagation();
+              onLike?.(e);
+            }}
+            disabled={!onLike}
+            data-testid="button-heart"
+          >
+            <Heart className={`h-4 w-4 ${isLiked ? 'fill-current' : ''}`} />
             <span className="text-sm" data-testid="text-heart-count">{heartCount}</span>
-          </div>
+          </button>
           <div className="flex items-center gap-1 text-muted-foreground">
             <MessageCircle className="h-4 w-4" />
             <span className="text-sm" data-testid="text-comment-count">{commentCount}</span>

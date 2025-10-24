@@ -129,18 +129,18 @@ export function PostDetailModal({
               </div>
 
               <div className="flex items-center gap-4">
-                <Button
-                  variant={post.isLiked ? "default" : "outline"}
-                  size="sm"
-                  className="gap-2"
+                <button
+                  className={`flex items-center gap-2 transition-colors ${
+                    post.isLiked ? 'text-red-500' : 'text-muted-foreground hover:text-red-500'
+                  }`}
                   onClick={onLike}
                   data-testid="button-like"
                 >
-                  <Heart className={`h-4 w-4 ${post.isLiked ? "fill-current" : ""}`} />
-                  <span data-testid="text-heart-count-modal">{post.heartCount}</span>
-                </Button>
+                  <Heart className={`h-5 w-5 ${post.isLiked ? "fill-current" : ""}`} />
+                  <span className="text-sm font-medium" data-testid="text-heart-count-modal">{post.heartCount}</span>
+                </button>
                 <div className="flex items-center gap-2 text-muted-foreground">
-                  <MessageCircle className="h-4 w-4" />
+                  <MessageCircle className="h-5 w-5" />
                   <span className="text-sm" data-testid="text-comment-count-modal">{post.comments.length}</span>
                 </div>
               </div>

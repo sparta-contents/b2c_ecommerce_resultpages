@@ -3,9 +3,10 @@ import { PostCard, PostCardProps } from "./PostCard";
 export interface PostGridProps {
   posts: PostCardProps[];
   onPostClick: (postId: string) => void;
+  onLike?: (postId: string, e: React.MouseEvent) => void;
 }
 
-export function PostGrid({ posts, onPostClick }: PostGridProps) {
+export function PostGrid({ posts, onPostClick, onLike }: PostGridProps) {
   if (posts.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-20">
@@ -21,6 +22,7 @@ export function PostGrid({ posts, onPostClick }: PostGridProps) {
           key={post.id}
           {...post}
           onClick={() => onPostClick(post.id)}
+          onLike={onLike ? (e) => onLike(post.id, e) : undefined}
         />
       ))}
     </div>

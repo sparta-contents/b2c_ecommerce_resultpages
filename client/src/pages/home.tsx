@@ -343,6 +343,19 @@ export default function Home() {
                 console.log('게시글 클릭됨, id:', id);
                 setSelectedPostId(id);
               }}
+              onLike={(postId, e) => {
+                if (!user) {
+                  toast({
+                    title: "로그인이 필요합니다",
+                    description: "Google 계정으로 로그인해주세요",
+                  });
+                  setTimeout(() => {
+                    signInWithGoogle();
+                  }, 1000);
+                  return;
+                }
+                heartMutation.mutate(postId);
+              }}
             />
 
             {/* Infinite scroll trigger */}
