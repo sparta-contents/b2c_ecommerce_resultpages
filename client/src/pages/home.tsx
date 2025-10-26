@@ -7,7 +7,7 @@ import { CreatePostModal } from "@/components/CreatePostModal";
 import { useLocation } from "wouter";
 import { useAuth } from "@/contexts/AuthContext";
 import { queryClient } from "@/lib/queryClient";
-import { getPosts, getPost, toggleHeart, createComment, updateComment, softDeletePost, softDeleteComment } from "@/lib/supabase-api";
+import { getPosts, getPost, toggleHeart, createComment, updateComment, softDeletePost, softDeleteComment, getUserProfile } from "@/lib/supabase-api";
 import { useToast } from "@/hooks/use-toast";
 
 export default function Home() {
@@ -21,6 +21,14 @@ export default function Home() {
   const { toast } = useToast();
 
   const { user, loading, isAdmin, signInWithGoogle, signOut } = useAuth();
+
+  // 사용자 프로필 조회 (업데이트된 프로필 이미지 표시용)
+  const { data: userProfile, isLoading: profileLoading } = useQuery({
+    queryKey: ['profile', user?.id],
+    queryFn: () => getUserProfile(user!.id),
+    enabled: !!user?.id,
+    staleTime: 1000 * 60 * 5, // 5분
+  });
 
   // Infinite scroll observer ref
   const observerRef = useRef<IntersectionObserver | null>(null);
@@ -289,8 +297,8 @@ export default function Home() {
         isLoggedIn={!!user}
         isAdmin={isAdmin}
         user={user ? {
-          name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
-          profileImage: user.user_metadata?.avatar_url
+          name: userProfile?.name || user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
+          profileImage: profileLoading ? undefined : (userProfile?.profile_image || user.user_metadata?.avatar_url)
         } : undefined}
         sortBy={sortBy}
         weekFilter={weekFilter}
@@ -313,6 +321,7 @@ export default function Home() {
         onLoginClick={signInWithGoogle}
         onLogoutClick={handleLogout}
         onMyPostsClick={handleMyPostsClick}
+        onProfileEditClick={() => setLocation("/profile")}
         onAdminClick={() => setLocation("/admin")}
         onLogoClick={() => {
           setShowMyPosts(false);

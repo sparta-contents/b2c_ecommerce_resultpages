@@ -137,7 +137,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
           const queryPromise = supabase
             .from('users')
-            .select('id, google_id, role')
+            .select('id, google_id, role, profile_image')
             .eq('id', session.user.id)
             .single();
 
@@ -193,12 +193,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           } else if (existingUser) {
             console.log('1-3. 기존 사용자 확인됨, role:', existingUser.role);
 
-            // Update google_id if missing
+            // Update google_id or profile_image if missing
+            const updateData: any = {};
             if (!existingUser.google_id) {
-              console.log('1-4. google_id 업데이트 중...');
-              await supabase.from('users').update({
-                google_id: session.user.user_metadata.sub || session.user.user_metadata.provider_id,
-              }).eq('id', session.user.id);
+              console.log('1-4. google_id 없음, 업데이트 예정');
+              updateData.google_id = session.user.user_metadata.sub || session.user.user_metadata.provider_id;
+            }
+            if (!existingUser.profile_image && session.user.user_metadata.avatar_url) {
+              console.log('1-4. profile_image 없음, Google 이미지로 설정 예정');
+              updateData.profile_image = session.user.user_metadata.avatar_url;
+            }
+
+            if (Object.keys(updateData).length > 0) {
+              console.log('1-4. 사용자 정보 업데이트 중...', updateData);
+              await supabase.from('users').update(updateData).eq('id', session.user.id);
             }
 
             setUserRole(existingUser.role || 'user');

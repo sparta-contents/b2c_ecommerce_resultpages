@@ -14,7 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { PenSquare, LogOut, User, Shield } from "lucide-react";
+import { PenSquare, LogOut, User, Shield, Settings, ArrowLeft } from "lucide-react";
 import { ThemeToggle } from "./ThemeToggle";
 import logoImage from "@assets/image_1760699207937.png";
 
@@ -28,34 +28,42 @@ export interface HeaderProps {
     name: string;
     profileImage?: string;
   };
-  sortBy: SortType;
-  weekFilter: WeekFilter;
-  onSortChange: (sort: SortType) => void;
-  onWeekFilterChange: (week: WeekFilter) => void;
-  onWriteClick: () => void;
+  sortBy?: SortType;
+  weekFilter?: WeekFilter;
+  onSortChange?: (sort: SortType) => void;
+  onWeekFilterChange?: (week: WeekFilter) => void;
+  onWriteClick?: () => void;
   onLoginClick: () => void;
   onLogoutClick: () => void;
   onMyPostsClick: () => void;
+  onProfileEditClick?: () => void;
   onAdminClick?: () => void;
   onLogoClick?: () => void;
+  variant?: 'full' | 'minimal';
+  showBackButton?: boolean;
+  onBackClick?: () => void;
 }
 
 export function Header({
   isLoggedIn = false,
   isAdmin = false,
   user,
-  sortBy,
-  weekFilter,
+  sortBy = 'latest',
+  weekFilter = 'all',
   onSortChange,
   onWeekFilterChange,
   onWriteClick,
   onLoginClick,
   onLogoutClick,
   onMyPostsClick,
+  onProfileEditClick,
   onAdminClick,
   onLogoClick,
+  variant = 'full',
+  showBackButton = false,
+  onBackClick,
 }: HeaderProps) {
-  console.log('Header rendered:', { isLoggedIn, isAdmin, userName: user?.name });
+  console.log('Header rendered:', { isLoggedIn, isAdmin, userName: user?.name, variant, showBackButton });
 
   return (
     <header className="sticky top-0 z-50 backdrop-blur-md bg-background/80 border-b">
@@ -71,43 +79,58 @@ export function Header({
         </div>
 
         <div className="flex items-center gap-3">
-          <Select value={weekFilter} onValueChange={(value) => onWeekFilterChange(value as WeekFilter)}>
-            <SelectTrigger className="w-[130px]" data-testid="select-week">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all" data-testid="option-all">전체</SelectItem>
-              <SelectItem value="1주차 과제" data-testid="option-week1">1주차 과제</SelectItem>
-              <SelectItem value="2주차 과제" data-testid="option-week2">2주차 과제</SelectItem>
-              <SelectItem value="3주차 과제" data-testid="option-week3">3주차 과제</SelectItem>
-              <SelectItem value="4주차 과제" data-testid="option-week4">4주차 과제</SelectItem>
-              <SelectItem value="5주차 과제" data-testid="option-week5">5주차 과제</SelectItem>
-              <SelectItem value="6주차 과제" data-testid="option-week6">6주차 과제</SelectItem>
-            </SelectContent>
-          </Select>
+          {variant === 'full' && (
+            <>
+              <Select value={weekFilter} onValueChange={(value) => onWeekFilterChange?.(value as WeekFilter)}>
+                <SelectTrigger className="w-[130px]" data-testid="select-week">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all" data-testid="option-all">전체</SelectItem>
+                  <SelectItem value="1주차 과제" data-testid="option-week1">1주차 과제</SelectItem>
+                  <SelectItem value="2주차 과제" data-testid="option-week2">2주차 과제</SelectItem>
+                  <SelectItem value="3주차 과제" data-testid="option-week3">3주차 과제</SelectItem>
+                  <SelectItem value="4주차 과제" data-testid="option-week4">4주차 과제</SelectItem>
+                  <SelectItem value="5주차 과제" data-testid="option-week5">5주차 과제</SelectItem>
+                  <SelectItem value="6주차 과제" data-testid="option-week6">6주차 과제</SelectItem>
+                </SelectContent>
+              </Select>
 
-          <Select value={sortBy} onValueChange={(value) => onSortChange(value as SortType)}>
-            <SelectTrigger className="w-[120px]" data-testid="select-sort">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="latest" data-testid="option-latest">최신순</SelectItem>
-              <SelectItem value="popular" data-testid="option-popular">인기순</SelectItem>
-            </SelectContent>
-          </Select>
+              <Select value={sortBy} onValueChange={(value) => onSortChange?.(value as SortType)}>
+                <SelectTrigger className="w-[120px]" data-testid="select-sort">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="latest" data-testid="option-latest">최신순</SelectItem>
+                  <SelectItem value="popular" data-testid="option-popular">인기순</SelectItem>
+                </SelectContent>
+              </Select>
 
-          <Button
-            onClick={() => {
-              console.log('글쓰기 버튼 클릭됨');
-              onWriteClick();
-            }}
-            data-testid="button-write"
-          >
-            <PenSquare className="h-4 w-4 mr-2" />
-            글쓰기
-          </Button>
+              <Button
+                onClick={() => {
+                  console.log('글쓰기 버튼 클릭됨');
+                  onWriteClick?.();
+                }}
+                data-testid="button-write"
+              >
+                <PenSquare className="h-4 w-4 mr-2" />
+                글쓰기
+              </Button>
 
-          <ThemeToggle />
+              <ThemeToggle />
+            </>
+          )}
+
+          {showBackButton && onBackClick && (
+            <Button
+              variant="outline"
+              onClick={onBackClick}
+              className="gap-2"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              메인으로 돌아가기
+            </Button>
+          )}
 
           {isLoggedIn && user ? (
             <DropdownMenu>
@@ -115,11 +138,17 @@ export function Header({
                 <Button variant="ghost" size="icon" className="rounded-full" data-testid="button-profile-menu">
                   <Avatar className="h-8 w-8">
                     <AvatarImage src={user.profileImage} />
-                    <AvatarFallback>{user.name[0]}</AvatarFallback>
+                    <AvatarFallback>{user.profileImage === undefined ? '' : user.name[0]}</AvatarFallback>
                   </Avatar>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
+                {onProfileEditClick && (
+                  <DropdownMenuItem onClick={onProfileEditClick} data-testid="menu-profile-edit">
+                    <Settings className="h-4 w-4 mr-2" />
+                    내 정보 수정
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuItem onClick={onMyPostsClick} data-testid="menu-my-posts">
                   <User className="h-4 w-4 mr-2" />
                   내가 쓴 글

@@ -417,3 +417,60 @@ export async function getWeekFilterStats() {
 
   return Object.entries(weekStats).map(([week, count]) => ({ week, count }));
 }
+
+// Profile Management
+
+/**
+ * 사용자 프로필 조회
+ */
+export async function getUserProfile(userId: string) {
+  const { data, error } = await supabase
+    .from('users')
+    .select('id, email, name, profile_image, role, created_at')
+    .eq('id', userId)
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+/**
+ * 사용자 프로필 업데이트
+ */
+export async function updateUserProfile(
+  userId: string,
+  data: { name?: string; profile_image?: string }
+) {
+  const { data: updatedUser, error } = await supabase
+    .from('users')
+    .update(data)
+    .eq('id', userId)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return updatedUser;
+}
+
+/**
+ * 프로필 이미지 업로드 (리사이징된 이미지)
+ */
+export async function uploadProfileImage(file: Blob, userId: string): Promise<string> {
+  const fileExt = 'jpg'; // 리사이징 후 항상 JPEG
+  const fileName = `${userId}/${Date.now()}.${fileExt}`;
+
+  const { error: uploadError } = await supabase.storage
+    .from('profile-images')
+    .upload(fileName, file, {
+      contentType: 'image/jpeg',
+      upsert: false,
+    });
+
+  if (uploadError) throw uploadError;
+
+  const { data } = supabase.storage
+    .from('profile-images')
+    .getPublicUrl(fileName);
+
+  return data.publicUrl;
+}
