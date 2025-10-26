@@ -36,5 +36,21 @@ export default defineConfig({
       strict: true,
       deny: ["**/.*"],
     },
+    hmr: {
+      overlay: true, // Keep error overlay
+    },
+  },
+  // Suppress HMR logs in console
+  customLogger: {
+    info: (msg) => {
+      if (!msg.includes('[vite] hot updated')) {
+        console.info(msg);
+      }
+    },
+    warn: console.warn,
+    error: console.error,
+    warnOnce: console.warn,
+    hasWarned: false,
+    clearScreen: () => {},
   },
 });

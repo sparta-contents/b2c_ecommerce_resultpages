@@ -63,8 +63,6 @@ export function Header({
   showBackButton = false,
   onBackClick,
 }: HeaderProps) {
-  console.log('Header rendered:', { isLoggedIn, isAdmin, userName: user?.name, variant, showBackButton });
-
   return (
     <header className="sticky top-0 z-50 backdrop-blur-md bg-background/80 border-b">
       <div className="max-w-7xl mx-auto px-4 lg:px-8 h-16 flex items-center justify-between">
@@ -93,7 +91,6 @@ export function Header({
 
               <Button
                 onClick={() => {
-                  console.log('글쓰기 버튼 클릭됨');
                   onWriteClick?.();
                 }}
                 data-testid="button-write"

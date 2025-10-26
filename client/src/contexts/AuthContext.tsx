@@ -124,7 +124,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
           // Add timeout to prevent hanging (optimized to 3 seconds)
           const timeoutPromise = new Promise((_, reject) =>
-            setTimeout(() => reject(new Error('Query timeout after 3 seconds')), 3000)
+            setTimeout(() => reject(new Error('Query timeout after 5 seconds')), 5000)
           );
 
           const { data: existingUser, error: queryError } = await Promise.race([
