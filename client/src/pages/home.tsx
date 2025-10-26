@@ -4,10 +4,20 @@ import { Header, SortType, WeekFilter } from "@/components/Header";
 import { PostGrid } from "@/components/PostGrid";
 import { PostDetailModal } from "@/components/PostDetailModal";
 import { CreatePostModal } from "@/components/CreatePostModal";
+import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
 import { useAuth } from "@/contexts/AuthContext";
 import { queryClient } from "@/lib/queryClient";
-import { getPosts, getPost, toggleHeart, createComment, updateComment, softDeletePost, softDeleteComment, getUserProfile } from "@/lib/supabase-api";
+import {
+  getPosts,
+  getPost,
+  toggleHeart,
+  createComment,
+  updateComment,
+  softDeletePost,
+  softDeleteComment,
+  getUserProfile,
+} from "@/lib/supabase-api";
 import { useToast } from "@/hooks/use-toast";
 
 export default function Home() {
@@ -24,7 +34,7 @@ export default function Home() {
 
   // 사용자 프로필 조회 (업데이트된 프로필 이미지 표시용)
   const { data: userProfile, isLoading: profileLoading } = useQuery({
-    queryKey: ['profile', user?.id],
+    queryKey: ["profile", user?.id],
     queryFn: () => getUserProfile(user!.id),
     enabled: !!user?.id,
     staleTime: 1000 * 60 * 5, // 5분
@@ -41,15 +51,24 @@ export default function Home() {
     hasNextPage,
     isFetchingNextPage,
     isLoading: postsLoading,
-    error: postsError
+    error: postsError,
   } = useInfiniteQuery({
-    queryKey: ['posts', sortBy, weekFilter, showMyPosts ? user?.id : null],
+    queryKey: ["posts", sortBy, weekFilter, showMyPosts ? user?.id : null],
     queryFn: ({ pageParam = 0 }) => {
       const limit = pageParam === 0 ? 100 : 30; // First page: 100, subsequent: 30
-      return getPosts(sortBy, showMyPosts && user ? user.id : undefined, limit, pageParam, weekFilter !== 'all' ? weekFilter : undefined);
+      return getPosts(
+        sortBy,
+        showMyPosts && user ? user.id : undefined,
+        limit,
+        pageParam,
+        weekFilter !== "all" ? weekFilter : undefined
+      );
     },
     getNextPageParam: (lastPage, allPages) => {
-      const loadedCount = allPages.reduce((sum, page) => sum + page.posts.length, 0);
+      const loadedCount = allPages.reduce(
+        (sum, page) => sum + page.posts.length,
+        0
+      );
       if (loadedCount >= lastPage.total) {
         return undefined; // No more pages
       }
@@ -62,32 +81,21 @@ export default function Home() {
   });
 
   // Flatten all posts from pages
-  const posts = data?.pages.flatMap(page => page.posts) || [];
+  const posts = data?.pages.flatMap((page) => page.posts) || [];
 
   // 게시글 로딩 에러 처리
   useEffect(() => {
     if (postsError) {
-      console.error('게시글 로딩 에러:', postsError);
+      console.error("게시글 로딩 에러:", postsError);
       toast({
         title: "게시글을 불러오는데 실패했습니다",
-        description: postsError instanceof Error ? postsError.message : "알 수 없는 오류",
+        description:
+          postsError instanceof Error ? postsError.message : "알 수 없는 오류",
         variant: "destructive",
         duration: 5000,
       });
     }
   }, [postsError, toast]);
-
-  // Debug: posts 데이터 모니터링
-  useEffect(() => {
-    console.log('Posts 상태:', {
-      postsCount: posts.length,
-      postsLoading,
-      hasError: !!postsError,
-      authLoading: loading,
-      hasNextPage,
-      isFetchingNextPage,
-    });
-  }, [posts, postsLoading, postsError, loading, hasNextPage, isFetchingNextPage]);
 
   // Infinite scroll implementation using Intersection Observer
   useEffect(() => {
@@ -98,11 +106,10 @@ export default function Home() {
     observerRef.current = new IntersectionObserver(
       (entries) => {
         if (entries[0].isIntersecting && hasNextPage && !isFetchingNextPage) {
-          console.log('Loading more posts...');
           fetchNextPage();
         }
       },
-      { threshold: 0.1, rootMargin: '100px' }
+      { threshold: 0.1, rootMargin: "100px" }
     );
 
     if (currentLoadMoreRef) {
@@ -116,40 +123,28 @@ export default function Home() {
     };
   }, [hasNextPage, isFetchingNextPage, fetchNextPage, postsLoading]);
 
-  const { data: selectedPost, refetch: refetchPost, isLoading: selectedPostLoading } = useQuery({
-    queryKey: ['post', selectedPostId],
-    queryFn: async () => {
-      console.log('getPost 호출됨, selectedPostId:', selectedPostId);
-      const post = await getPost(selectedPostId!);
-      console.log('getPost 결과:', post);
-      return post;
-    },
+  const {
+    data: selectedPost,
+    refetch: refetchPost,
+    isLoading: selectedPostLoading,
+  } = useQuery({
+    queryKey: ["post", selectedPostId],
+    queryFn: () => getPost(selectedPostId!),
     enabled: !!selectedPostId,
   });
 
   const { data: editPost } = useQuery({
-    queryKey: ['post', editPostId],
+    queryKey: ["post", editPostId],
     queryFn: () => getPost(editPostId!),
     enabled: !!editPostId,
   });
-
-  // Debug: selectedPostId 변경 모니터링
-  useEffect(() => {
-    console.log('selectedPostId 변경됨:', selectedPostId);
-  }, [selectedPostId]);
-
-  // Debug: selectedPost 변경 모니터링
-  useEffect(() => {
-    console.log('selectedPost 변경됨:', selectedPost);
-    console.log('selectedPostLoading:', selectedPostLoading);
-  }, [selectedPost, selectedPostLoading]);
 
   const heartMutation = useMutation({
     mutationFn: toggleHeart,
     onSuccess: (_, postId) => {
       // Update infinite query cache
       queryClient.setQueryData(
-        ['posts', sortBy, weekFilter, showMyPosts ? user?.id : null],
+        ["posts", sortBy, weekFilter, showMyPosts ? user?.id : null],
         (oldData: any) => {
           if (!oldData) return oldData;
 
@@ -159,25 +154,29 @@ export default function Home() {
               ...page,
               posts: page.posts.map((post: any) => {
                 if (post.id === postId) {
-                  const isCurrentlyLiked = post.hearts?.some((h: any) => h.user_id === user?.id);
+                  const isCurrentlyLiked = post.hearts?.some(
+                    (h: any) => h.user_id === user?.id
+                  );
                   return {
                     ...post,
-                    heart_count: isCurrentlyLiked ? post.heart_count - 1 : post.heart_count + 1,
+                    heart_count: isCurrentlyLiked
+                      ? post.heart_count - 1
+                      : post.heart_count + 1,
                     hearts: isCurrentlyLiked
                       ? post.hearts.filter((h: any) => h.user_id !== user?.id)
-                      : [...(post.hearts || []), { user_id: user?.id }]
+                      : [...(post.hearts || []), { user_id: user?.id }],
                   };
                 }
                 return post;
-              })
-            }))
+              }),
+            })),
           };
         }
       );
 
       // Update single post cache if modal is open
       if (selectedPostId) {
-        queryClient.invalidateQueries({ queryKey: ['post', selectedPostId] });
+        queryClient.invalidateQueries({ queryKey: ["post", selectedPostId] });
       }
     },
   });
@@ -186,27 +185,32 @@ export default function Home() {
     mutationFn: ({ postId, content }: { postId: string; content: string }) =>
       createComment(postId, content),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['posts'] });
+      queryClient.invalidateQueries({ queryKey: ["posts"] });
       if (selectedPostId) {
-        queryClient.invalidateQueries({ queryKey: ['post', selectedPostId] });
+        queryClient.invalidateQueries({ queryKey: ["post", selectedPostId] });
       }
     },
   });
 
   const updateCommentMutation = useMutation({
-    mutationFn: ({ commentId, content }: { commentId: string; content: string }) =>
-      updateComment(commentId, content),
+    mutationFn: ({
+      commentId,
+      content,
+    }: {
+      commentId: string;
+      content: string;
+    }) => updateComment(commentId, content),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['posts'] });
+      queryClient.invalidateQueries({ queryKey: ["posts"] });
       if (selectedPostId) {
-        queryClient.invalidateQueries({ queryKey: ['post', selectedPostId] });
+        queryClient.invalidateQueries({ queryKey: ["post", selectedPostId] });
       }
       toast({
         title: "댓글이 수정되었습니다",
       });
     },
     onError: (error) => {
-      console.error('댓글 수정 실패:', error);
+      console.error("댓글 수정 실패:", error);
       toast({
         title: "댓글 수정에 실패했습니다",
         description: error instanceof Error ? error.message : "알 수 없는 오류",
@@ -219,7 +223,6 @@ export default function Home() {
   const softDeletePostMutation = useMutation({
     mutationFn: softDeletePost,
     onSuccess: () => {
-      console.log('게시글 삭제 완료, 새로고침 시작');
       toast({
         title: "게시물이 삭제되었습니다",
       });
@@ -227,7 +230,7 @@ export default function Home() {
       window.location.reload();
     },
     onError: (error) => {
-      console.error('게시글 삭제 실패:', error);
+      console.error("게시글 삭제 실패:", error);
       toast({
         title: "게시물 삭제에 실패했습니다",
         description: error instanceof Error ? error.message : "알 수 없는 오류",
@@ -240,9 +243,9 @@ export default function Home() {
   const softDeleteCommentMutation = useMutation({
     mutationFn: softDeleteComment,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['posts'] });
+      queryClient.invalidateQueries({ queryKey: ["posts"] });
       if (selectedPostId) {
-        queryClient.invalidateQueries({ queryKey: ['post', selectedPostId] });
+        queryClient.invalidateQueries({ queryKey: ["post", selectedPostId] });
       }
       toast({
         title: "댓글이 삭제되었습니다",
@@ -255,7 +258,6 @@ export default function Home() {
   };
 
   const handleLogout = async () => {
-    console.log('handleLogout 호출됨');
     setShowMyPosts(false);
     await signOut();
   };
@@ -267,7 +269,7 @@ export default function Home() {
         <div className="text-center">
           <p className="text-muted-foreground">로딩 중...</p>
           <p className="text-xs text-muted-foreground mt-2">
-            {user ? '사용자 정보 확인 중...' : '인증 확인 중...'}
+            {user ? "사용자 정보 확인 중..." : "인증 확인 중..."}
           </p>
         </div>
       </div>
@@ -275,10 +277,11 @@ export default function Home() {
   }
 
   // Convert Supabase post data to component format
-  const formattedPosts = posts.map(post => ({
+  const formattedPosts = posts.map((post) => ({
     id: post.id,
     title: post.title,
-    contentPreview: post.content.slice(0, 60) + (post.content.length > 60 ? '...' : ''),
+    contentPreview:
+      post.content.slice(0, 60) + (post.content.length > 60 ? "..." : ""),
     imageUrl: post.image_url,
     week: post.week,
     author: {
@@ -288,7 +291,7 @@ export default function Home() {
     heartCount: post.heart_count,
     commentCount: post.comment_count,
     createdAt: post.created_at,
-    isLiked: post.hearts?.some(h => h.user_id === user?.id) || false,
+    isLiked: post.hearts?.some((h) => h.user_id === user?.id) || false,
   }));
 
   return (
@@ -296,14 +299,23 @@ export default function Home() {
       <Header
         isLoggedIn={!!user}
         isAdmin={isAdmin}
-        user={user ? {
-          name: userProfile?.name || user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
-          profileImage: profileLoading ? undefined : (userProfile?.profile_image || user.user_metadata?.avatar_url)
-        } : undefined}
+        user={
+          user
+            ? {
+                name:
+                  userProfile?.name ||
+                  user.user_metadata?.full_name ||
+                  user.email?.split("@")[0] ||
+                  "User",
+                profileImage: profileLoading
+                  ? undefined
+                  : userProfile?.profile_image ||
+                    user.user_metadata?.avatar_url,
+              }
+            : undefined
+        }
         sortBy={sortBy}
-        weekFilter={weekFilter}
         onSortChange={setSortBy}
-        onWeekFilterChange={setWeekFilter}
         onWriteClick={() => {
           if (!user) {
             toast({
@@ -331,12 +343,87 @@ export default function Home() {
       />
 
       <main className="max-w-7xl mx-auto px-4 lg:px-8 py-8">
-        {showMyPosts && (
-          <div className="mb-6">
-            <h2 className="text-2xl font-semibold" data-testid="text-my-posts-title">내가 쓴 글</h2>
-          </div>
-        )}
-        
+        <div className="mb-6">
+          <h2
+            className="text-2xl font-semibold mb-4"
+            data-testid={
+              showMyPosts ? "text-my-posts-title" : "text-community-title"
+            }
+          >
+            {showMyPosts ? "내가 쓴 글" : "스파르타 셀러 커뮤니티"}
+          </h2>
+
+          {/* 주차 필터 버튼 */}
+          {!showMyPosts && (
+            <div className="flex flex-wrap gap-2">
+              <Button
+                variant={weekFilter === "all" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setWeekFilter("all")}
+                data-testid="button-week-all"
+              >
+                전체
+              </Button>
+              <Button
+                variant={weekFilter === "공지" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setWeekFilter("공지")}
+                data-testid="button-week-notice"
+              >
+                공지
+              </Button>
+              <Button
+                variant={weekFilter === "1주차 과제" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setWeekFilter("1주차 과제")}
+                data-testid="button-week-1"
+              >
+                1주차
+              </Button>
+              <Button
+                variant={weekFilter === "2주차 과제" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setWeekFilter("2주차 과제")}
+                data-testid="button-week-2"
+              >
+                2주차
+              </Button>
+              <Button
+                variant={weekFilter === "3주차 과제" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setWeekFilter("3주차 과제")}
+                data-testid="button-week-3"
+              >
+                3주차
+              </Button>
+              <Button
+                variant={weekFilter === "4주차 과제" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setWeekFilter("4주차 과제")}
+                data-testid="button-week-4"
+              >
+                4주차
+              </Button>
+              <Button
+                variant={weekFilter === "5주차 과제" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setWeekFilter("5주차 과제")}
+                data-testid="button-week-5"
+              >
+                5주차
+              </Button>
+              <Button
+                variant={weekFilter === "6주차 과제" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setWeekFilter("6주차 과제")}
+                data-testid="button-week-6"
+              >
+                6주차
+              </Button>
+            </div>
+          )}
+        </div>
+
         {postsLoading ? (
           <div className="text-center py-12" data-testid="text-loading">
             <p className="text-muted-foreground">로딩 중...</p>
@@ -352,7 +439,6 @@ export default function Home() {
             <PostGrid
               posts={formattedPosts}
               onPostClick={(id) => {
-                console.log('게시글 클릭됨, id:', id);
                 setSelectedPostId(id);
               }}
               onLike={(postId, e) => {
@@ -374,24 +460,30 @@ export default function Home() {
             {hasNextPage && (
               <div ref={loadMoreRef} className="text-center py-8">
                 {isFetchingNextPage ? (
-                  <p className="text-muted-foreground">더 많은 게시글을 불러오는 중...</p>
+                  <p className="text-muted-foreground">
+                    더 많은 게시글을 불러오는 중...
+                  </p>
                 ) : (
-                  <p className="text-muted-foreground text-sm">스크롤하여 더 보기</p>
+                  <p className="text-muted-foreground text-sm">
+                    스크롤하여 더 보기
+                  </p>
                 )}
               </div>
             )}
 
             {!hasNextPage && posts.length > 0 && (
               <div className="text-center py-8">
-                <p className="text-muted-foreground text-sm">모든 게시글을 불러왔습니다</p>
+                <p className="text-muted-foreground text-sm">
+                  모든 게시글을 불러왔습니다
+                </p>
               </div>
             )}
           </>
         )}
       </main>
 
-      {selectedPostId && (
-        selectedPost ? (
+      {selectedPostId &&
+        (selectedPost ? (
           <PostDetailModal
             open={true}
             onOpenChange={(open) => !open && setSelectedPostId(null)}
@@ -408,7 +500,9 @@ export default function Home() {
                 profileImage: selectedPost.user.profile_image || undefined,
               },
               heartCount: selectedPost.heart_count,
-              isLiked: selectedPost.hearts?.some((h: any) => h.user_id === user?.id) || false,
+              isLiked:
+                selectedPost.hearts?.some((h: any) => h.user_id === user?.id) ||
+                false,
               isOwn: user?.id === selectedPost.user_id,
               comments: (selectedPost.comments || []).map((c: any) => ({
                 id: c.id,
@@ -485,8 +579,7 @@ export default function Home() {
               comments: [],
             }}
           />
-        )
-      )}
+        ))}
 
       <CreatePostModal
         open={showCreateModal || !!editPostId}
@@ -497,13 +590,18 @@ export default function Home() {
           }
         }}
         editMode={!!editPostId}
-        initialData={editPost ? {
-          id: editPost.id,
-          title: editPost.title,
-          content: editPost.content,
-          week: editPost.week,
-          image_url: editPost.image_url,
-        } : undefined}
+        initialData={
+          editPost
+            ? {
+                id: editPost.id,
+                title: editPost.title,
+                content: editPost.content,
+                week: editPost.week,
+                image_url: editPost.image_url,
+              }
+            : undefined
+        }
+        isAdmin={isAdmin}
       />
     </div>
   );

@@ -44,7 +44,6 @@ export const PostCard = memo(function PostCard({
     <Card
       className="overflow-hidden cursor-pointer transition-all duration-300 hover:scale-[1.02] hover:shadow-xl group"
       onClick={() => {
-        console.log('PostCard onClick 호출됨, title:', title);
         onClick?.();
       }}
       data-testid={`card-post-${title}`}
@@ -92,7 +91,12 @@ export const PostCard = memo(function PostCard({
       </div>
       <div className="p-4 space-y-3">
         <div className="space-y-2">
-          <Badge data-testid="badge-week">{week}</Badge>
+          <Badge
+            data-testid="badge-week"
+            className={week === "공지" ? "bg-green-500 hover:bg-green-600 text-white" : ""}
+          >
+            {week}
+          </Badge>
           <h3 className="font-semibold text-lg line-clamp-1" data-testid="text-post-title">
             {title}
           </h3>

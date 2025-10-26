@@ -17,6 +17,7 @@ export interface CreatePostModalProps {
     week: string;
     image_url: string;
   };
+  isAdmin?: boolean;
 }
 
 export function CreatePostModal({
@@ -24,6 +25,7 @@ export function CreatePostModal({
   onOpenChange,
   editMode = false,
   initialData,
+  isAdmin = false,
 }: CreatePostModalProps) {
   const { toast } = useToast();
   const [isUploading, setIsUploading] = useState(false);
@@ -80,7 +82,7 @@ export function CreatePostModal({
 
     if (!data.week) {
       toast({
-        title: "과제 단계를 선택해주세요",
+        title: "카테고리를 선택해주세요",
         variant: "destructive",
       });
       return;
@@ -140,6 +142,7 @@ export function CreatePostModal({
             onSubmit={handleSubmit}
             onCancel={() => onOpenChange(false)}
             initialData={initialData}
+            isAdmin={isAdmin}
           />
         )}
       </DialogContent>

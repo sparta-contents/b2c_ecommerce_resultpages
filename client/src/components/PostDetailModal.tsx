@@ -124,7 +124,12 @@ export function PostDetailModal({
 
             <div className="flex-1 overflow-y-auto p-6 space-y-6 min-h-0">
               <div className="space-y-3">
-                <Badge data-testid="badge-week-detail">{post.week}</Badge>
+                <Badge
+                  data-testid="badge-week-detail"
+                  className={post.week === "공지" ? "bg-green-500 hover:bg-green-600 text-white" : ""}
+                >
+                  {post.week}
+                </Badge>
                 <p className="text-sm leading-relaxed whitespace-pre-line" data-testid="text-post-detail-content">{post.content}</p>
               </div>
 

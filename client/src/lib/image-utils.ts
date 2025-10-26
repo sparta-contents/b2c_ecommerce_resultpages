@@ -91,7 +91,6 @@ export async function resizeImage(
         canvas.toBlob(
           (blob) => {
             if (blob) {
-              console.log(`이미지 리사이징 완료: ${file.size} bytes → ${blob.size} bytes`);
               resolve(blob);
             } else {
               reject(new Error('이미지 변환에 실패했습니다.'));

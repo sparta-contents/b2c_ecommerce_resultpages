@@ -9,6 +9,7 @@ import { Users, FileText, MessageCircle, Heart } from "lucide-react";
 import { PostDetailModal } from "@/components/PostDetailModal";
 import { WeeklyPostsChart } from "@/components/WeeklyPostsChart";
 import { WeekFilterChart } from "@/components/WeekFilterChart";
+import { UserWeeklyPostStatus } from "@/components/UserWeeklyPostStatus";
 import { getPost, toggleHeart, createComment, updateComment, softDeletePost, softDeleteComment, getWeeklyPostStats, getWeekFilterStats } from "@/lib/supabase-api";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -195,6 +196,9 @@ export default function Admin() {
             {weeklyStats && weeklyStats.length > 0 && (
               <WeeklyPostsChart data={weeklyStats} />
             )}
+
+            {/* User Weekly Post Status */}
+            <UserWeeklyPostStatus />
 
             {/* Recent Posts */}
             <Card>

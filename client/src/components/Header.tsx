@@ -19,7 +19,7 @@ import { ThemeToggle } from "./ThemeToggle";
 import logoImage from "@assets/image_1760699207937.png";
 
 export type SortType = "latest" | "popular";
-export type WeekFilter = "all" | "1주차 과제" | "2주차 과제" | "3주차 과제" | "4주차 과제" | "5주차 과제" | "6주차 과제";
+export type WeekFilter = "공지" | "all" | "1주차 과제" | "2주차 과제" | "3주차 과제" | "4주차 과제" | "5주차 과제" | "6주차 과제";
 
 export interface HeaderProps {
   isLoggedIn?: boolean;
@@ -81,21 +81,6 @@ export function Header({
         <div className="flex items-center gap-3">
           {variant === 'full' && (
             <>
-              <Select value={weekFilter} onValueChange={(value) => onWeekFilterChange?.(value as WeekFilter)}>
-                <SelectTrigger className="w-[130px]" data-testid="select-week">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all" data-testid="option-all">전체</SelectItem>
-                  <SelectItem value="1주차 과제" data-testid="option-week1">1주차 과제</SelectItem>
-                  <SelectItem value="2주차 과제" data-testid="option-week2">2주차 과제</SelectItem>
-                  <SelectItem value="3주차 과제" data-testid="option-week3">3주차 과제</SelectItem>
-                  <SelectItem value="4주차 과제" data-testid="option-week4">4주차 과제</SelectItem>
-                  <SelectItem value="5주차 과제" data-testid="option-week5">5주차 과제</SelectItem>
-                  <SelectItem value="6주차 과제" data-testid="option-week6">6주차 과제</SelectItem>
-                </SelectContent>
-              </Select>
-
               <Select value={sortBy} onValueChange={(value) => onSortChange?.(value as SortType)}>
                 <SelectTrigger className="w-[120px]" data-testid="select-sort">
                   <SelectValue />

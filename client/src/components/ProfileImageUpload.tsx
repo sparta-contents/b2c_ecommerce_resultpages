@@ -1,9 +1,9 @@
-import { useState, useRef } from 'react';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Button } from '@/components/ui/button';
-import { Camera, Loader2 } from 'lucide-react';
-import { validateImageFile, resizeImage } from '@/lib/image-utils';
-import { useToast } from '@/hooks/use-toast';
+import { useState, useRef } from "react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { Camera, Loader2 } from "lucide-react";
+import { validateImageFile, resizeImage } from "@/lib/image-utils";
+import { useToast } from "@/hooks/use-toast";
 
 interface ProfileImageUploadProps {
   currentImage?: string | null;
@@ -31,9 +31,9 @@ export function ProfileImageUpload({
     const validation = validateImageFile(file);
     if (!validation.valid) {
       toast({
-        title: '업로드 실패',
+        title: "업로드 실패",
         description: validation.error,
-        variant: 'destructive',
+        variant: "destructive",
       });
       return;
     }
@@ -52,21 +52,24 @@ export function ProfileImageUpload({
       await onImageChange(resizedBlob);
 
       toast({
-        title: '업로드 성공',
-        description: '프로필 사진이 변경되었습니다.',
+        title: "업로드 성공",
+        description: "프로필 사진이 변경되었습니다.",
       });
     } catch (error) {
-      console.error('이미지 업로드 에러:', error);
+      console.error("이미지 업로드 에러:", error);
       toast({
-        title: '업로드 실패',
-        description: error instanceof Error ? error.message : '이미지 업로드에 실패했습니다.',
-        variant: 'destructive',
+        title: "업로드 실패",
+        description:
+          error instanceof Error
+            ? error.message
+            : "이미지 업로드에 실패했습니다.",
+        variant: "destructive",
       });
     } finally {
       setIsUploading(false);
       // input 초기화 (같은 파일을 다시 선택할 수 있도록)
       if (fileInputRef.current) {
-        fileInputRef.current.value = '';
+        fileInputRef.current.value = "";
       }
     }
   };
@@ -102,10 +105,10 @@ export function ProfileImageUpload({
           disabled={disabled || isUploading}
         >
           <Camera className="h-4 w-4 mr-2" />
-          {isUploading ? '업로드 중...' : '프로필 사진 변경'}
+          {isUploading ? "업로드 중..." : "프로필 사진 변경"}
         </Button>
         <p className="text-xs text-muted-foreground mt-2">
-          권장 200x200px 이상 (JPG, PNG)
+          권장 200x200px (JPG, PNG)
         </p>
       </div>
 

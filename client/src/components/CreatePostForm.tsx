@@ -13,7 +13,12 @@ import {
 import { Upload, X, RefreshCw } from "lucide-react";
 
 export interface CreatePostFormProps {
-  onSubmit: (data: { title: string; content: string; week: string; image: File | null }) => void;
+  onSubmit: (data: {
+    title: string;
+    content: string;
+    week: string;
+    image: File | null;
+  }) => void;
   onCancel: () => void;
   initialData?: {
     title: string;
@@ -21,14 +26,22 @@ export interface CreatePostFormProps {
     week: string;
     image_url: string;
   };
+  isAdmin?: boolean;
 }
 
-export function CreatePostForm({ onSubmit, onCancel, initialData }: CreatePostFormProps) {
+export function CreatePostForm({
+  onSubmit,
+  onCancel,
+  initialData,
+  isAdmin = false,
+}: CreatePostFormProps) {
   const [title, setTitle] = useState(initialData?.title || "");
   const [content, setContent] = useState(initialData?.content || "");
   const [week, setWeek] = useState(initialData?.week || "");
   const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(initialData?.image_url || null);
+  const [imagePreview, setImagePreview] = useState<string | null>(
+    initialData?.image_url || null
+  );
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const TITLE_MAX_LENGTH = 60;
@@ -76,7 +89,7 @@ export function CreatePostForm({ onSubmit, onCancel, initialData }: CreatePostFo
           id="title"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          placeholder="작품 제목을 입력하세요"
+          placeholder="제목을 입력하세요"
           maxLength={TITLE_MAX_LENGTH}
           required
           data-testid="input-title"
@@ -84,18 +97,35 @@ export function CreatePostForm({ onSubmit, onCancel, initialData }: CreatePostFo
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="week">과제 단계</Label>
+        <Label htmlFor="week">카테고리</Label>
         <Select value={week} onValueChange={setWeek} required>
           <SelectTrigger id="week" data-testid="select-week">
-            <SelectValue placeholder="과제 단계를 선택하세요" />
+            <SelectValue placeholder="카테고리를 선택하세요" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="1주차 과제" data-testid="option-week1">1주차 과제</SelectItem>
-            <SelectItem value="2주차 과제" data-testid="option-week2">2주차 과제</SelectItem>
-            <SelectItem value="3주차 과제" data-testid="option-week3">3주차 과제</SelectItem>
-            <SelectItem value="4주차 과제" data-testid="option-week4">4주차 과제</SelectItem>
-            <SelectItem value="5주차 과제" data-testid="option-week5">5주차 과제</SelectItem>
-            <SelectItem value="6주차 과제" data-testid="option-week6">6주차 과제</SelectItem>
+            {isAdmin && (
+              <SelectItem value="공지" data-testid="option-notice">
+                공지
+              </SelectItem>
+            )}
+            <SelectItem value="1주차 과제" data-testid="option-week1">
+              1주차 과제
+            </SelectItem>
+            <SelectItem value="2주차 과제" data-testid="option-week2">
+              2주차 과제
+            </SelectItem>
+            <SelectItem value="3주차 과제" data-testid="option-week3">
+              3주차 과제
+            </SelectItem>
+            <SelectItem value="4주차 과제" data-testid="option-week4">
+              4주차 과제
+            </SelectItem>
+            <SelectItem value="5주차 과제" data-testid="option-week5">
+              5주차 과제
+            </SelectItem>
+            <SelectItem value="6주차 과제" data-testid="option-week6">
+              6주차 과제
+            </SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -111,7 +141,7 @@ export function CreatePostForm({ onSubmit, onCancel, initialData }: CreatePostFo
           id="content"
           value={content}
           onChange={(e) => setContent(e.target.value)}
-          placeholder="작품에 대한 설명을 입력하세요"
+          placeholder="내용을 입력하세요"
           className="min-h-[200px] resize-none"
           maxLength={CONTENT_MAX_LENGTH}
           required
@@ -173,7 +203,12 @@ export function CreatePostForm({ onSubmit, onCancel, initialData }: CreatePostFo
       </div>
 
       <div className="flex gap-3 justify-end">
-        <Button type="button" variant="outline" onClick={onCancel} data-testid="button-cancel">
+        <Button
+          type="button"
+          variant="outline"
+          onClick={onCancel}
+          data-testid="button-cancel"
+        >
           취소
         </Button>
         <Button type="submit" data-testid="button-submit">

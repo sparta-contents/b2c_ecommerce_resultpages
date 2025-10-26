@@ -12,15 +12,13 @@ import { useEffect, useState } from "react";
 export default function Write() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const { user, loading } = useAuth();
+  const { user, loading, isAdmin } = useAuth();
   const [isUploading, setIsUploading] = useState(false);
-
-  console.log('Write page - loading:', loading, 'user:', user?.id, 'email:', user?.email);
 
   const createPostMutation = useMutation({
     mutationFn: createPost,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['posts'] });
+      queryClient.invalidateQueries({ queryKey: ["posts"] });
       toast({
         title: "게시물이 작성되었습니다",
       });
@@ -40,8 +38,6 @@ export default function Write() {
     week: string;
     image: File | null;
   }) => {
-    console.log('Submit data:', data);
-
     if (!data.image) {
       toast({
         title: "이미지를 선택해주세요",
@@ -52,7 +48,7 @@ export default function Write() {
 
     if (!data.week) {
       toast({
-        title: "과제 단계를 선택해주세요",
+        title: "카테고리를 선택해주세요",
         variant: "destructive",
       });
       return;
@@ -60,11 +56,9 @@ export default function Write() {
 
     try {
       setIsUploading(true);
-      console.log('Uploading image...');
 
       // Upload image first
       const imageUrl = await uploadImage(data.image);
-      console.log('Image uploaded:', imageUrl);
 
       // Create post with image URL
       createPostMutation.mutate({
@@ -74,7 +68,7 @@ export default function Write() {
         image_url: imageUrl,
       });
     } catch (error) {
-      console.error('Upload error:', error);
+      console.error("Upload error:", error);
       toast({
         title: "이미지 업로드에 실패했습니다",
         description: error instanceof Error ? error.message : "알 수 없는 오류",
@@ -133,6 +127,7 @@ export default function Write() {
           <CreatePostForm
             onSubmit={handleSubmit}
             onCancel={() => setLocation("/")}
+            isAdmin={isAdmin}
           />
         )}
       </main>

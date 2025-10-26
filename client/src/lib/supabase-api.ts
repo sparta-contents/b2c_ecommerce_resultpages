@@ -8,8 +8,6 @@ export async function getPosts(
   offset: number = 0,
   weekFilter?: string
 ) {
-  console.log('getPosts 호출됨, sortBy:', sortBy, 'userId:', userId, 'limit:', limit, 'offset:', offset, 'weekFilter:', weekFilter);
-
   let query = supabase
     .from('posts')
     .select(`
@@ -40,8 +38,6 @@ export async function getPosts(
   query = query.range(offset, offset + limit - 1);
 
   const { data, error, count } = await query;
-
-  console.log('getPosts 결과 - data count:', data?.length, 'total:', count, 'error:', error);
 
   if (error) {
     console.error('getPosts 에러:', error);
@@ -129,15 +125,11 @@ export async function updatePost(id: string, data: {
 
 // Soft delete for regular users
 export async function softDeletePost(id: string) {
-  console.log('softDeletePost 호출됨, id:', id);
-
   const { data, error } = await supabase
     .from('posts')
     .update({ is_deleted: true })
     .eq('id', id)
     .select();
-
-  console.log('softDeletePost 결과 - data:', data, 'error:', error);
 
   if (error) {
     console.error('softDeletePost 에러:', error);
@@ -473,4 +465,60 @@ export async function uploadProfileImage(file: Blob, userId: string): Promise<st
     .getPublicUrl(fileName);
 
   return data.publicUrl;
+}
+
+// User Weekly Post Status (for admin dashboard)
+export interface UserWeeklyPostStatus {
+  id: string;
+  name: string;
+  email: string;
+  profile_image: string | null;
+  weeklyPosts: {
+    [key: string]: string[];  // week -> post IDs
+  };
+}
+
+export async function getUserWeeklyPostStatus(): Promise<UserWeeklyPostStatus[]> {
+  // Get all regular users (exclude admin)
+  const { data: users, error: usersError } = await supabase
+    .from('users')
+    .select('id, name, email, profile_image')
+    .eq('role', 'user')
+    .order('name', { ascending: true });
+
+  if (usersError) throw usersError;
+  if (!users) return [];
+
+  // Get all posts for these users
+  const userIds = users.map(u => u.id);
+  const { data: posts, error: postsError } = await supabase
+    .from('posts')
+    .select('id, user_id, week')
+    .in('user_id', userIds)
+    .eq('is_deleted', false)
+    .order('created_at', { ascending: false });
+
+  if (postsError) throw postsError;
+
+  // Group posts by user and week
+  const weeks = ['1주차 과제', '2주차 과제', '3주차 과제', '4주차 과제', '5주차 과제', '6주차 과제', '공지'];
+
+  return users.map(user => {
+    const userPosts = posts?.filter(p => p.user_id === user.id) || [];
+
+    const weeklyPosts: { [key: string]: string[] } = {};
+    weeks.forEach(week => {
+      weeklyPosts[week] = userPosts
+        .filter(p => p.week === week)
+        .map(p => p.id);
+    });
+
+    return {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      profile_image: user.profile_image,
+      weeklyPosts,
+    };
+  });
 }
