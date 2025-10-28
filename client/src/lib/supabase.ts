@@ -138,6 +138,35 @@ export type Database = {
           user_id?: string;
         };
       };
+      approved_users: {
+        Row: {
+          id: string;
+          name: string;
+          phone: string;
+          is_verified: boolean;
+          user_id: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          phone: string;
+          is_verified?: boolean;
+          user_id?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          name?: string;
+          phone?: string;
+          is_verified?: boolean;
+          user_id?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
     };
   };
 };

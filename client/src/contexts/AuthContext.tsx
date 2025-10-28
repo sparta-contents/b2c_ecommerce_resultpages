@@ -9,6 +9,15 @@ interface AuthContextType {
   isAdmin: boolean;
   signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
+  needsVerification: boolean;
+  pendingGoogleUser: {
+    email: string;
+    name: string;
+    profile_image?: string;
+    google_id: string;
+    user_id: string;
+  } | null;
+  clearVerificationState: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -19,6 +28,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [userRole, setUserRole] = useState<string | null>(null);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [initialLoadComplete, setInitialLoadComplete] = useState(false);
+  const [needsVerification, setNeedsVerification] = useState(false);
+  const [pendingGoogleUser, setPendingGoogleUser] = useState<{
+    email: string;
+    name: string;
+    profile_image?: string;
+    google_id: string;
+    user_id: string;
+  } | null>(null);
 
   const fetchUserRole = useCallback(async (userId: string) => {
     try {
@@ -132,32 +149,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             timeoutPromise
           ]) as any;
 
-          // PGRST116 = not found error
+          // PGRST116 = not found error (user not in users table)
           if (queryError && queryError.code === 'PGRST116') {
-            const userData = {
-              id: session.user.id,
+            // User not found - need verification
+            const googleUserData = {
               email: session.user.email!,
               name: session.user.user_metadata.full_name || session.user.email!.split('@')[0],
               profile_image: session.user.user_metadata.avatar_url,
               google_id: session.user.user_metadata.sub || session.user.user_metadata.provider_id,
-              role: 'user', // 기본 role
+              user_id: session.user.id, // Include auth user ID
             };
 
-            const { data: newUser, error: insertError } = await supabase
-              .from('users')
-              .insert(userData)
-              .select()
-              .single();
+            setPendingGoogleUser(googleUserData);
+            setNeedsVerification(true);
 
-            if (insertError) {
-              console.error('사용자 생성 실패:', insertError);
-            }
-
-            if (!insertError && newUser) {
-              setUserRole(newUser.role || 'user');
-            } else {
-              setUserRole('user');
-            }
+            // Keep the Google session active - don't sign out
+            // This allows us to create the user with proper RLS policies
           } else if (existingUser) {
             // Update google_id or profile_image if missing
             const updateData: any = {};
@@ -220,6 +227,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Clear state
       setUser(null);
       setUserRole(null);
+      setNeedsVerification(false);
+      setPendingGoogleUser(null);
 
       // Call Supabase signOut
       const { error } = await supabase.auth.signOut({ scope: 'global' });
@@ -234,10 +243,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const clearVerificationState = () => {
+    setNeedsVerification(false);
+    setPendingGoogleUser(null);
+  };
+
   const isAdmin = userRole === 'admin';
 
   return (
-    <AuthContext.Provider value={{ user, loading, userRole, isAdmin, signInWithGoogle, signOut }}>
+    <AuthContext.Provider value={{
+      user,
+      loading,
+      userRole,
+      isAdmin,
+      signInWithGoogle,
+      signOut,
+      needsVerification,
+      pendingGoogleUser,
+      clearVerificationState
+    }}>
       {children}
     </AuthContext.Provider>
   );

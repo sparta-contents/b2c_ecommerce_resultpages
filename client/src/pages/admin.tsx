@@ -5,19 +5,23 @@ import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
-import { Users, FileText, MessageCircle, Heart } from "lucide-react";
+import { Users, FileText, MessageCircle, Heart, UserCheck, BarChart3 } from "lucide-react";
 import { PostDetailModal } from "@/components/PostDetailModal";
 import { WeeklyPostsChart } from "@/components/WeeklyPostsChart";
 import { WeekFilterChart } from "@/components/WeekFilterChart";
 import { UserWeeklyPostStatus } from "@/components/UserWeeklyPostStatus";
+import { ApprovedUserManagement } from "@/components/ApprovedUserManagement";
 import { getPost, toggleHeart, createComment, updateComment, softDeletePost, softDeleteComment, getWeeklyPostStats, getWeekFilterStats } from "@/lib/supabase-api";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+
+type TabType = "stats" | "weekly" | "approved-users";
 
 export default function Admin() {
   const [, setLocation] = useLocation();
   const { user, isAdmin } = useAuth();
   const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<TabType>("stats");
   const { toast } = useToast();
 
   const { data: stats, isLoading } = useQuery({
@@ -142,13 +146,62 @@ export default function Admin() {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 lg:px-8 py-8">
-        {isLoading ? (
-          <div className="text-center py-12">
-            <p className="text-muted-foreground">로딩 중...</p>
+      {/* Tabs */}
+      <div className="border-b bg-muted/30">
+        <div className="max-w-7xl mx-auto px-4 lg:px-8">
+          <div className="flex gap-4">
+            <button
+              onClick={() => setActiveTab("stats")}
+              className={`px-4 py-3 font-medium border-b-2 transition-colors ${
+                activeTab === "stats"
+                  ? "border-primary text-primary"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <BarChart3 className="h-4 w-4" />
+                통계
+              </div>
+            </button>
+            <button
+              onClick={() => setActiveTab("weekly")}
+              className={`px-4 py-3 font-medium border-b-2 transition-colors ${
+                activeTab === "weekly"
+                  ? "border-primary text-primary"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <FileText className="h-4 w-4" />
+                주간별 제출 현황
+              </div>
+            </button>
+            <button
+              onClick={() => setActiveTab("approved-users")}
+              className={`px-4 py-3 font-medium border-b-2 transition-colors ${
+                activeTab === "approved-users"
+                  ? "border-primary text-primary"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <UserCheck className="h-4 w-4" />
+                승인 사용자 관리
+              </div>
+            </button>
           </div>
-        ) : (
-          <div className="space-y-8">
+        </div>
+      </div>
+
+      <main className="max-w-7xl mx-auto px-4 lg:px-8 py-8">
+        {activeTab === "stats" && (
+          <>
+            {isLoading ? (
+              <div className="text-center py-12">
+                <p className="text-muted-foreground">로딩 중...</p>
+              </div>
+            ) : (
+              <div className="space-y-8">
             {/* Stats Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               <Card>
@@ -239,7 +292,13 @@ export default function Admin() {
               </CardContent>
             </Card>
           </div>
+            )}
+          </>
         )}
+
+        {activeTab === "weekly" && <UserWeeklyPostStatus />}
+
+        {activeTab === "approved-users" && <ApprovedUserManagement />}
       </main>
 
       {selectedPostId && selectedPost && (

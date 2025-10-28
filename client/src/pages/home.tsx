@@ -55,7 +55,7 @@ export default function Home() {
   } = useInfiniteQuery({
     queryKey: ["posts", sortBy, weekFilter, showMyPosts ? user?.id : null],
     queryFn: ({ pageParam = 0 }) => {
-      const limit = pageParam === 0 ? 100 : 30; // First page: 100, subsequent: 30
+      const limit = 28; // Load 28 posts per page for better performance
       return getPosts(
         sortBy,
         showMyPosts && user ? user.id : undefined,
