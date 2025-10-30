@@ -30,7 +30,7 @@ export default function Home() {
   const [editPostId, setEditPostId] = useState<string | null>(null);
   const { toast } = useToast();
 
-  const { user, loading, isAdmin, signInWithGoogle, signOut } = useAuth();
+  const { user, loading, isAdmin, isAuthenticated, signInWithGoogle, signOut } = useAuth();
 
   // 사용자 프로필 조회 (업데이트된 프로필 이미지 표시용)
   const { data: userProfile, isLoading: profileLoading } = useQuery({
@@ -297,10 +297,10 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-background">
       <Header
-        isLoggedIn={!!user}
+        isLoggedIn={isAuthenticated}
         isAdmin={isAdmin}
         user={
-          user
+          isAuthenticated && user
             ? {
                 name:
                   userProfile?.name ||
@@ -317,7 +317,7 @@ export default function Home() {
         sortBy={sortBy}
         onSortChange={setSortBy}
         onWriteClick={() => {
-          if (!user) {
+          if (!isAuthenticated) {
             toast({
               title: "로그인이 필요합니다",
               description: "Google 계정으로 로그인해주세요",
@@ -442,7 +442,7 @@ export default function Home() {
                 setSelectedPostId(id);
               }}
               onLike={(postId, e) => {
-                if (!user) {
+                if (!isAuthenticated) {
                   toast({
                     title: "로그인이 필요합니다",
                     description: "Google 계정으로 로그인해주세요",
@@ -524,7 +524,7 @@ export default function Home() {
               }
             }}
             onLike={() => {
-              if (!user) {
+              if (!isAuthenticated) {
                 toast({
                   title: "로그인이 필요합니다",
                   variant: "destructive",
@@ -534,7 +534,7 @@ export default function Home() {
               heartMutation.mutate(selectedPostId!);
             }}
             onCommentSubmit={(content) => {
-              if (!user) {
+              if (!isAuthenticated) {
                 toast({
                   title: "로그인이 필요합니다",
                   variant: "destructive",
@@ -544,7 +544,7 @@ export default function Home() {
               commentMutation.mutate({ postId: selectedPostId!, content });
             }}
             onEditComment={(commentId, content) => {
-              if (!user) {
+              if (!isAuthenticated) {
                 toast({
                   title: "로그인이 필요합니다",
                   variant: "destructive",

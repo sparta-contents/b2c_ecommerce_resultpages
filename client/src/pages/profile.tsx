@@ -15,8 +15,14 @@ import { queryClient } from '@/lib/queryClient';
 
 export default function Profile() {
   const [, setLocation] = useLocation();
-  const { user, loading: authLoading, isAdmin, signOut } = useAuth();
+  const { user, loading: authLoading, isAdmin, isAuthenticated, signOut } = useAuth();
   const { toast } = useToast();
+
+  // Redirect if not authenticated
+  if (!authLoading && !isAuthenticated) {
+    setLocation("/");
+    return null;
+  }
 
   const [name, setName] = useState('');
   const [uploadedImageBlob, setUploadedImageBlob] = useState<Blob | null>(null);

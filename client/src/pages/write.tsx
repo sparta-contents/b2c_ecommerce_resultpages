@@ -12,8 +12,14 @@ import { useEffect, useState } from "react";
 export default function Write() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const { user, loading, isAdmin } = useAuth();
+  const { user, loading, isAdmin, isAuthenticated } = useAuth();
   const [isUploading, setIsUploading] = useState(false);
+
+  // Redirect if not authenticated
+  if (!loading && !isAuthenticated) {
+    setLocation("/");
+    return null;
+  }
 
   const createPostMutation = useMutation({
     mutationFn: createPost,

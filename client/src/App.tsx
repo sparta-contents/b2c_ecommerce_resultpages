@@ -26,7 +26,7 @@ function Router() {
 }
 
 function AppContent() {
-  const { needsVerification, pendingGoogleUser, clearVerificationState } = useAuth();
+  const { needsVerification, pendingGoogleUser, clearVerificationState, signOut } = useAuth();
   const { toast } = useToast();
 
   const handleVerificationSuccess = () => {
@@ -39,8 +39,12 @@ function AppContent() {
     window.location.reload();
   };
 
-  const handleVerificationClose = () => {
+  const handleVerificationClose = async () => {
     clearVerificationState();
+
+    // Supabase 세션 삭제 (로그아웃 처리)
+    await signOut();
+
     toast({
       title: "인증 취소",
       description: "회원가입이 취소되었습니다.",

@@ -19,7 +19,7 @@ type TabType = "stats" | "weekly" | "approved-users";
 
 export default function Admin() {
   const [, setLocation] = useLocation();
-  const { user, isAdmin } = useAuth();
+  const { user, isAdmin, isAuthenticated } = useAuth();
   const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<TabType>("stats");
   const { toast } = useToast();
@@ -127,8 +127,8 @@ export default function Admin() {
     },
   });
 
-  // Redirect if not admin
-  if (!isAdmin) {
+  // Redirect if not authenticated or not admin
+  if (!isAuthenticated || !isAdmin) {
     setLocation("/");
     return null;
   }

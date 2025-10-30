@@ -7,6 +7,7 @@ interface AuthContextType {
   loading: boolean;
   userRole: string | null;
   isAdmin: boolean;
+  isAuthenticated: boolean;
   signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
   needsVerification: boolean;
@@ -249,6 +250,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const isAdmin = userRole === 'admin';
+  const isAuthenticated = !!user && !needsVerification;
 
   return (
     <AuthContext.Provider value={{
@@ -256,6 +258,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       loading,
       userRole,
       isAdmin,
+      isAuthenticated,
       signInWithGoogle,
       signOut,
       needsVerification,
