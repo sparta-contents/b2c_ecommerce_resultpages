@@ -129,6 +129,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (!mounted) return;
 
+      // SIGNED_OUT 이벤트 시 즉시 상태 초기화
+      if (event === 'SIGNED_OUT') {
+        setUser(null);
+        setUserRole(null);
+        setNeedsVerification(false);
+        setPendingGoogleUser(null);
+        return;
+      }
+
       setUser(session?.user ?? null);
 
       // Sync user data to our users table
@@ -181,14 +190,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             }
 
             setUserRole(existingUser.role || 'user');
+            setNeedsVerification(false);
+            setPendingGoogleUser(null);
           } else if (queryError) {
-            console.error('쿼리 에러:', queryError);
+            // 406 에러 등 다른 에러는 조용히 처리
+            if (queryError.code !== '406') {
+              console.error('쿼리 에러:', queryError);
+            }
             setUserRole('user');
           } else {
             setUserRole('user');
           }
         } catch (err) {
-          console.error('사용자 데이터 동기화 중 에러:', err);
+          // Timeout 에러는 조용히 처리
+          const errorMessage = err instanceof Error ? err.message : String(err);
+          if (!errorMessage.includes('timeout')) {
+            console.error('사용자 데이터 동기화 중 에러:', err);
+          }
           setUserRole('user');
         }
       } else {
