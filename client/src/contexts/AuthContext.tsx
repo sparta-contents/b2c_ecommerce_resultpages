@@ -47,7 +47,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .single();
 
       if (error) {
-        console.error('Error fetching user role:', error);
+        if (import.meta.env.DEV) {
+          console.error('Error fetching user role:', error);
+        }
         setUserRole('user');
         return;
       }
@@ -55,7 +57,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const role = data?.role ?? 'user';
       setUserRole(role);
     } catch (err) {
-      console.error('Error in fetchUserRole:', err);
+      if (import.meta.env.DEV) {
+        console.error('Error in fetchUserRole:', err);
+      }
       setUserRole('user');
     }
   }, []);
@@ -78,7 +82,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const { data: { session }, error } = await supabase.auth.getSession();
 
         if (error) {
-          console.error('세션 로드 에러:', error);
+          if (import.meta.env.DEV) {
+            console.error('세션 로드 에러:', error);
+          }
           if (mounted) {
             setLoading(false);
             setInitialLoadComplete(true);
@@ -113,7 +119,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           if (loadingTimeout) clearTimeout(loadingTimeout);
         }
       } catch (err) {
-        console.error('세션 초기화 에러:', err);
+        if (import.meta.env.DEV) {
+          console.error('세션 초기화 에러:', err);
+        }
         if (mounted) {
           setLoading(false);
           setInitialLoadComplete(true);
@@ -145,13 +153,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         try {
           const queryPromise = supabase
             .from('users')
-            .select('id, google_id, role, profile_image')
+            .select('role, google_id, profile_image')
             .eq('id', session.user.id)
             .single();
 
-          // Add timeout to prevent hanging (optimized to 3 seconds)
+          // Add timeout to prevent hanging (optimized to 1 second)
           const timeoutPromise = new Promise((_, reject) =>
-            setTimeout(() => reject(new Error('Query timeout after 5 seconds')), 5000)
+            setTimeout(() => reject(new Error('Query timeout after 1 second')), 1000)
           );
 
           const { data: existingUser, error: queryError } = await Promise.race([
@@ -176,7 +184,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             // Keep the Google session active - don't sign out
             // This allows us to create the user with proper RLS policies
           } else if (existingUser) {
-            // Update google_id or profile_image if missing
+            // Set state immediately for fast UI rendering
+            setUserRole(existingUser.role || 'user');
+            setNeedsVerification(false);
+            setPendingGoogleUser(null);
+
+            // Update google_id or profile_image in background (non-blocking)
             const updateData: any = {};
             if (!existingUser.google_id) {
               updateData.google_id = session.user.user_metadata.sub || session.user.user_metadata.provider_id;
@@ -186,15 +199,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             }
 
             if (Object.keys(updateData).length > 0) {
-              await supabase.from('users').update(updateData).eq('id', session.user.id);
+              // Fire and forget - update in background without blocking
+              supabase.from('users')
+                .update(updateData)
+                .eq('id', session.user.id)
+                .then(() => {
+                  if (import.meta.env.DEV) {
+                    console.log('프로필 정보 업데이트 완료');
+                  }
+                })
+                .catch(err => {
+                  if (import.meta.env.DEV) {
+                    console.error('프로필 업데이트 실패:', err);
+                  }
+                });
             }
-
-            setUserRole(existingUser.role || 'user');
-            setNeedsVerification(false);
-            setPendingGoogleUser(null);
           } else if (queryError) {
             // 406 에러 등 다른 에러는 조용히 처리
-            if (queryError.code !== '406') {
+            if (queryError.code !== '406' && import.meta.env.DEV) {
               console.error('쿼리 에러:', queryError);
             }
             setUserRole('user');
@@ -203,9 +225,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }
         } catch (err) {
           // Timeout 에러는 조용히 처리
-          const errorMessage = err instanceof Error ? err.message : String(err);
-          if (!errorMessage.includes('timeout')) {
-            console.error('사용자 데이터 동기화 중 에러:', err);
+          if (import.meta.env.DEV) {
+            const errorMessage = err instanceof Error ? err.message : String(err);
+            if (!errorMessage.includes('timeout')) {
+              console.error('사용자 데이터 동기화 중 에러:', err);
+            }
           }
           setUserRole('user');
         }
@@ -231,7 +255,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // - Multiple accounts: show account selection
       },
     });
-    if (error) console.error('Error signing in with Google:', error);
+    if (error && import.meta.env.DEV) {
+      console.error('Error signing in with Google:', error);
+    }
   };
 
   const signOut = async () => {
@@ -252,11 +278,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Call Supabase signOut
       const { error } = await supabase.auth.signOut({ scope: 'global' });
 
-      if (error) {
+      if (error && import.meta.env.DEV) {
         console.error('Supabase signOut 에러:', error);
       }
     } catch (err) {
-      console.error('로그아웃 중 에러:', err);
+      if (import.meta.env.DEV) {
+        console.error('로그아웃 중 에러:', err);
+      }
     } finally {
       setIsLoggingOut(false);
     }
