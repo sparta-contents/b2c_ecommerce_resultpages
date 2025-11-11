@@ -63,7 +63,7 @@ export default function Admin() {
 
   const { data: selectedPost } = useQuery({
     queryKey: ['post', selectedPostId],
-    queryFn: () => getPost(selectedPostId!),
+    queryFn: () => getPost(selectedPostId!, user?.id),
     enabled: !!selectedPostId,
   });
 

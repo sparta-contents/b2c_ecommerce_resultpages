@@ -7,14 +7,14 @@ export async function getPosts(
   userId?: string,
   limit: number = 100,
   offset: number = 0,
-  weekFilter?: string
+  weekFilter?: string,
+  currentUserId?: string
 ) {
   let query = supabase
     .from('posts')
     .select(`
       *,
-      user:users!posts_user_id_fkey(id, name, email, profile_image),
-      hearts(user_id)
+      user:users!posts_user_id_fkey(id, name, email, profile_image)
     `, { count: 'exact' });
 
   if (userId) {
@@ -45,19 +45,39 @@ export async function getPosts(
     throw error;
   }
 
+  const posts = data || [];
+
+  // Fetch user's liked posts in a single query if user is logged in
+  let likedPostIds = new Set<string>();
+  if (currentUserId && posts.length > 0) {
+    const postIds = posts.map(p => p.id);
+    const { data: hearts } = await supabase
+      .from('hearts')
+      .select('post_id')
+      .eq('user_id', currentUserId)
+      .in('post_id', postIds);
+
+    likedPostIds = new Set(hearts?.map(h => h.post_id) || []);
+  }
+
+  // Add hearts array with only current user's like status
+  const postsWithHearts = posts.map(post => ({
+    ...post,
+    hearts: currentUserId && likedPostIds.has(post.id) ? [{ user_id: currentUserId }] : []
+  }));
+
   return {
-    posts: (data || []) as Post[],
+    posts: postsWithHearts as Post[],
     total: count || 0
   };
 }
 
-export async function getPost(id: string) {
+export async function getPost(id: string, currentUserId?: string) {
   const { data, error } = await supabase
     .from('posts')
     .select(`
       *,
       user:users!posts_user_id_fkey(id, name, email, profile_image),
-      hearts(user_id),
       comments(
         id,
         content,
@@ -82,7 +102,24 @@ export async function getPost(id: string) {
     data.comments = data.comments.filter((c: any) => !c.is_deleted);
   }
 
-  return data;
+  // Fetch user's like status if logged in
+  let isLiked = false;
+  if (currentUserId) {
+    const { data: heart } = await supabase
+      .from('hearts')
+      .select('id')
+      .eq('post_id', id)
+      .eq('user_id', currentUserId)
+      .maybeSingle(); // Use maybeSingle() to avoid 406 error
+
+    isLiked = !!heart;
+  }
+
+  // Add hearts array with only current user's like status
+  return {
+    ...data,
+    hearts: currentUserId && isLiked ? [{ user_id: currentUserId }] : []
+  };
 }
 
 export async function createPost(data: {
@@ -154,54 +191,35 @@ export async function toggleHeart(postId: string) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Not authenticated');
 
-  // Check if heart already exists
-  const { data: existingHeart } = await supabase
+  // Check if heart already exists - use maybeSingle() to avoid 406 error when no heart exists
+  const { data: existingHeart, error: checkError } = await supabase
     .from('hearts')
     .select('id')
     .eq('post_id', postId)
     .eq('user_id', user.id)
-    .single();
+    .maybeSingle();
+
+  // Ignore "no rows returned" error, but throw other errors
+  if (checkError && checkError.code !== 'PGRST116') {
+    throw checkError;
+  }
 
   if (existingHeart) {
-    // Remove heart
-    await supabase
+    // Remove heart - trigger will automatically decrement heart_count
+    const { error } = await supabase
       .from('hearts')
       .delete()
       .eq('post_id', postId)
       .eq('user_id', user.id);
 
-    // Decrement count
-    const { data: post } = await supabase
-      .from('posts')
-      .select('heart_count')
-      .eq('id', postId)
-      .single();
-
-    if (post) {
-      await supabase
-        .from('posts')
-        .update({ heart_count: Math.max(0, post.heart_count - 1) })
-        .eq('id', postId);
-    }
+    if (error) throw error;
   } else {
-    // Add heart
-    await supabase
+    // Add heart - trigger will automatically increment heart_count
+    const { error } = await supabase
       .from('hearts')
       .insert({ post_id: postId, user_id: user.id });
 
-    // Increment count
-    const { data: post } = await supabase
-      .from('posts')
-      .select('heart_count')
-      .eq('id', postId)
-      .single();
-
-    if (post) {
-      await supabase
-        .from('posts')
-        .update({ heart_count: post.heart_count + 1 })
-        .eq('id', postId);
-    }
+    if (error) throw error;
   }
 }
 

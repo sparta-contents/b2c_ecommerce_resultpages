@@ -35,7 +35,7 @@ export function PostSlideModal({
 
   const { data: post, isLoading } = useQuery({
     queryKey: ["post", currentPostId],
-    queryFn: () => getPost(currentPostId),
+    queryFn: () => getPost(currentPostId, user?.id),
     enabled: open && !!currentPostId,
     staleTime: 1000 * 60 * 5, // 5 minutes
   });

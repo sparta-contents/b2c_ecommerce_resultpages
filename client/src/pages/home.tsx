@@ -53,7 +53,7 @@ export default function Home() {
     isLoading: postsLoading,
     error: postsError,
   } = useInfiniteQuery({
-    queryKey: ["posts", sortBy, weekFilter, showMyPosts ? user?.id : null],
+    queryKey: ["posts", sortBy, weekFilter, showMyPosts ? user?.id : null, user?.id],
     queryFn: ({ pageParam = 0 }) => {
       const limit = 28; // Load 28 posts per page for better performance
       return getPosts(
@@ -61,7 +61,8 @@ export default function Home() {
         showMyPosts && user ? user.id : undefined,
         limit,
         pageParam,
-        weekFilter !== "all" ? weekFilter : undefined
+        weekFilter !== "all" ? weekFilter : undefined,
+        user?.id // Pass current user ID for optimized heart queries
       );
     },
     getNextPageParam: (lastPage, allPages) => {
@@ -129,55 +130,78 @@ export default function Home() {
     isLoading: selectedPostLoading,
   } = useQuery({
     queryKey: ["post", selectedPostId],
-    queryFn: () => getPost(selectedPostId!),
+    queryFn: () => getPost(selectedPostId!, user?.id),
     enabled: !!selectedPostId,
   });
 
   const { data: editPost } = useQuery({
     queryKey: ["post", editPostId],
-    queryFn: () => getPost(editPostId!),
+    queryFn: () => getPost(editPostId!, user?.id),
     enabled: !!editPostId,
   });
 
   const heartMutation = useMutation({
     mutationFn: toggleHeart,
-    onSuccess: (_, postId) => {
-      // Update infinite query cache
-      queryClient.setQueryData(
-        ["posts", sortBy, weekFilter, showMyPosts ? user?.id : null],
-        (oldData: any) => {
-          if (!oldData) return oldData;
+    // Optimistic update - update UI immediately before server responds
+    onMutate: async (postId) => {
+      const queryKey = ["posts", sortBy, weekFilter, showMyPosts ? user?.id : null, user?.id];
 
-          return {
-            ...oldData,
-            pages: oldData.pages.map((page: any) => ({
-              ...page,
-              posts: page.posts.map((post: any) => {
-                if (post.id === postId) {
-                  const isCurrentlyLiked = post.hearts?.some(
-                    (h: any) => h.user_id === user?.id
-                  );
-                  return {
-                    ...post,
-                    heart_count: isCurrentlyLiked
-                      ? post.heart_count - 1
-                      : post.heart_count + 1,
-                    hearts: isCurrentlyLiked
-                      ? post.hearts.filter((h: any) => h.user_id !== user?.id)
-                      : [...(post.hearts || []), { user_id: user?.id }],
-                  };
-                }
-                return post;
-              }),
-            })),
-          };
-        }
-      );
+      // Cancel outgoing refetches
+      await queryClient.cancelQueries({ queryKey });
 
-      // Update single post cache if modal is open
-      if (selectedPostId) {
-        queryClient.invalidateQueries({ queryKey: ["post", selectedPostId] });
+      // Snapshot previous value
+      const previousData = queryClient.getQueryData(queryKey);
+
+      // Optimistically update cache
+      queryClient.setQueryData(queryKey, (oldData: any) => {
+        if (!oldData) return oldData;
+
+        return {
+          ...oldData,
+          pages: oldData.pages.map((page: any) => ({
+            ...page,
+            posts: page.posts.map((post: any) => {
+              if (post.id === postId) {
+                const isCurrentlyLiked = post.hearts?.some(
+                  (h: any) => h.user_id === user?.id
+                );
+                const newHeartCount = isCurrentlyLiked
+                  ? post.heart_count - 1
+                  : post.heart_count + 1;
+
+                return {
+                  ...post,
+                  heart_count: newHeartCount,
+                  hearts: isCurrentlyLiked
+                    ? post.hearts.filter((h: any) => h.user_id !== user?.id)
+                    : [...(post.hearts || []), { user_id: user?.id }],
+                };
+              }
+              return post;
+            }),
+          })),
+        };
+      });
+
+      // Return context with previous data for rollback
+      return { previousData, queryKey };
+    },
+    // On error, rollback to previous state
+    onError: (err, postId, context) => {
+      if (context?.previousData) {
+        queryClient.setQueryData(context.queryKey, context.previousData);
       }
+      toast({
+        title: "오류가 발생했습니다",
+        description: "다시 시도해주세요",
+        variant: "destructive",
+      });
+    },
+    // Trust optimistic update - don't refetch immediately
+    // Database trigger handles heart_count automatically
+    onSuccess: () => {
+      // We trust the optimistic update and don't refetch
+      // The next natural data fetch will sync with server
     },
   });
 
