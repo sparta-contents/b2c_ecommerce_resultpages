@@ -16,7 +16,8 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { PenSquare, LogOut, User, Shield, Settings, ArrowLeft } from "lucide-react";
 import { ThemeToggle } from "./ThemeToggle";
-import logoImage from "@assets/image_1760699207937.png";
+
+const logoImage = "/logo.png";
 
 export type SortType = "latest" | "popular";
 export type WeekFilter = "공지" | "all" | "1주차 과제" | "2주차 과제" | "3주차 과제" | "4주차 과제" | "5주차 과제" | "6주차 과제";
