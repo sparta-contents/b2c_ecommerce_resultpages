@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Heart, MessageCircle, Edit, Trash2, Check, X } from "lucide-react";
 import { useState } from "react";
+import { ImageLightbox } from "./ImageLightbox";
 
 export interface Comment {
   id: string;
@@ -60,6 +61,7 @@ export function PostDetailModal({
   const [newComment, setNewComment] = useState("");
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
   const [editingContent, setEditingContent] = useState("");
+  const [lightboxOpen, setLightboxOpen] = useState(false);
 
   const handleCommentSubmit = () => {
     if (newComment.trim() && onCommentSubmit) {
@@ -99,8 +101,9 @@ export function PostDetailModal({
               <img
                 src={post.imageUrl}
                 alt={post.title}
-                className="max-w-full max-h-full object-contain"
+                className="max-w-full max-h-full object-contain cursor-pointer hover:opacity-90 transition-opacity"
                 data-testid="img-post-detail"
+                onClick={() => setLightboxOpen(true)}
               />
             )}
           </div>
@@ -264,6 +267,14 @@ export function PostDetailModal({
           </div>
         </div>
       </DialogContent>
+
+      {/* Image Lightbox */}
+      <ImageLightbox
+        open={lightboxOpen}
+        onOpenChange={setLightboxOpen}
+        imageUrl={post.imageUrl}
+        imageAlt={post.title}
+      />
     </Dialog>
   );
 }

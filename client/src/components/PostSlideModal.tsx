@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { getPost } from "@/lib/supabase-api";
 import { useAuth } from "@/contexts/AuthContext";
+import { ImageLightbox } from "./ImageLightbox";
 
 interface PostSlideModalProps {
   open: boolean;
@@ -29,6 +30,7 @@ export function PostSlideModal({
   week,
 }: PostSlideModalProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
   const { user } = useAuth();
 
   const currentPostId = postIds[currentIndex];
@@ -123,7 +125,8 @@ export function PostSlideModal({
               <img
                 src={post.image_url}
                 alt={post.title}
-                className="max-w-full max-h-full object-contain"
+                className="max-w-full max-h-full object-contain cursor-pointer hover:opacity-90 transition-opacity"
+                onClick={() => setLightboxOpen(true)}
               />
             </div>
 
@@ -217,6 +220,16 @@ export function PostSlideModal({
           </div>
         )}
       </DialogContent>
+
+      {/* Image Lightbox */}
+      {post && (
+        <ImageLightbox
+          open={lightboxOpen}
+          onOpenChange={setLightboxOpen}
+          imageUrl={post.image_url}
+          imageAlt={post.title}
+        />
+      )}
     </Dialog>
   );
 }
