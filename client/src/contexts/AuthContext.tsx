@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import type { User } from '@supabase/supabase-js';
+import { trackLogin } from '@/lib/analytics';
 
 interface AuthContextType {
   user: User | null;
@@ -188,6 +189,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             setUserRole(existingUser.role || 'user');
             setNeedsVerification(false);
             setPendingGoogleUser(null);
+
+            // 로그인 이벤트 추적 (SIGNED_IN 이벤트일 때만)
+            if (event === 'SIGNED_IN') {
+              trackLogin('Google');
+            }
 
             // Update google_id or profile_image in background (non-blocking)
             const updateData: any = {};

@@ -1,4 +1,4 @@
-import { Switch, Route } from "wouter";
+import { Switch, Route, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -12,6 +12,8 @@ import Admin from "@/pages/admin";
 import Profile from "@/pages/profile";
 import NotFound from "@/pages/not-found";
 import { useToast } from "@/hooks/use-toast";
+import { initGA, trackPageView } from "@/lib/analytics";
+import { useEffect } from "react";
 
 function Router() {
   return (
@@ -28,6 +30,17 @@ function Router() {
 function AppContent() {
   const { needsVerification, pendingGoogleUser, clearVerificationState, signOut } = useAuth();
   const { toast } = useToast();
+  const [location] = useLocation();
+
+  // GA4 초기화 (앱 시작 시 1회만)
+  useEffect(() => {
+    initGA();
+  }, []);
+
+  // 페이지 이동 추적
+  useEffect(() => {
+    trackPageView(location);
+  }, [location]);
 
   const handleVerificationSuccess = () => {
     clearVerificationState();

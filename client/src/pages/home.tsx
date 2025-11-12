@@ -19,6 +19,7 @@ import {
   getUserProfile,
 } from "@/lib/supabase-api";
 import { useToast } from "@/hooks/use-toast";
+import { trackPostView, trackLike, trackComment, trackLogin, trackLogout } from "@/lib/analytics";
 
 export default function Home() {
   const [, setLocation] = useLocation();
@@ -130,7 +131,14 @@ export default function Home() {
     isLoading: selectedPostLoading,
   } = useQuery({
     queryKey: ["post", selectedPostId],
-    queryFn: () => getPost(selectedPostId!, user?.id),
+    queryFn: async () => {
+      const post = await getPost(selectedPostId!, user?.id);
+      // 게시글 조회 이벤트 추적
+      if (post) {
+        trackPostView(post.id, post.title);
+      }
+      return post;
+    },
     enabled: !!selectedPostId,
   });
 
@@ -199,20 +207,27 @@ export default function Home() {
     },
     // Trust optimistic update - don't refetch immediately
     // Database trigger handles heart_count automatically
-    onSuccess: () => {
+    onSuccess: (_, postId) => {
       // We trust the optimistic update and don't refetch
       // The next natural data fetch will sync with server
+
+      // 좋아요 이벤트 추적
+      const post = posts.find(p => p.id === postId);
+      const isLiked = post?.hearts?.some((h: any) => h.user_id === user?.id);
+      trackLike(postId, !isLiked); // 이전 상태의 반대가 새로운 상태
     },
   });
 
   const commentMutation = useMutation({
     mutationFn: ({ postId, content }: { postId: string; content: string }) =>
       createComment(postId, content),
-    onSuccess: () => {
+    onSuccess: (_, { postId }) => {
       queryClient.invalidateQueries({ queryKey: ["posts"] });
       if (selectedPostId) {
         queryClient.invalidateQueries({ queryKey: ["post", selectedPostId] });
       }
+      // 댓글 작성 이벤트 추적
+      trackComment(postId);
     },
   });
 
@@ -283,6 +298,7 @@ export default function Home() {
 
   const handleLogout = async () => {
     setShowMyPosts(false);
+    trackLogout(); // 로그아웃 이벤트 추적
     await signOut();
   };
 
