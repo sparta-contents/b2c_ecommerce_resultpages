@@ -152,16 +152,37 @@ export default function Home() {
     mutationFn: toggleHeart,
     // Optimistic update - update UI immediately before server responds
     onMutate: async (postId) => {
-      const queryKey = ["posts", sortBy, weekFilter, showMyPosts ? user?.id : null, user?.id];
+      const postsQueryKey = ["posts", sortBy, weekFilter, showMyPosts ? user?.id : null, user?.id];
+      const postQueryKey = ["post", postId];
 
-      // Cancel outgoing refetches
-      await queryClient.cancelQueries({ queryKey });
+      // Cancel outgoing refetches for both posts list and selected post
+      await queryClient.cancelQueries({ queryKey: postsQueryKey });
+      await queryClient.cancelQueries({ queryKey: postQueryKey });
 
-      // Snapshot previous value
-      const previousData = queryClient.getQueryData(queryKey);
+      // Snapshot previous values
+      const previousPostsData = queryClient.getQueryData(postsQueryKey);
+      const previousPostData = queryClient.getQueryData(postQueryKey);
 
-      // Optimistically update cache
-      queryClient.setQueryData(queryKey, (oldData: any) => {
+      // Helper function to update heart state
+      const updateHeartState = (post: any) => {
+        const isCurrentlyLiked = post.hearts?.some(
+          (h: any) => h.user_id === user?.id
+        );
+        const newHeartCount = isCurrentlyLiked
+          ? post.heart_count - 1
+          : post.heart_count + 1;
+
+        return {
+          ...post,
+          heart_count: newHeartCount,
+          hearts: isCurrentlyLiked
+            ? post.hearts.filter((h: any) => h.user_id !== user?.id)
+            : [...(post.hearts || []), { user_id: user?.id }],
+        };
+      };
+
+      // Optimistically update posts list cache
+      queryClient.setQueryData(postsQueryKey, (oldData: any) => {
         if (!oldData) return oldData;
 
         return {
@@ -170,20 +191,7 @@ export default function Home() {
             ...page,
             posts: page.posts.map((post: any) => {
               if (post.id === postId) {
-                const isCurrentlyLiked = post.hearts?.some(
-                  (h: any) => h.user_id === user?.id
-                );
-                const newHeartCount = isCurrentlyLiked
-                  ? post.heart_count - 1
-                  : post.heart_count + 1;
-
-                return {
-                  ...post,
-                  heart_count: newHeartCount,
-                  hearts: isCurrentlyLiked
-                    ? post.hearts.filter((h: any) => h.user_id !== user?.id)
-                    : [...(post.hearts || []), { user_id: user?.id }],
-                };
+                return updateHeartState(post);
               }
               return post;
             }),
@@ -191,13 +199,22 @@ export default function Home() {
         };
       });
 
+      // Optimistically update selected post cache
+      queryClient.setQueryData(postQueryKey, (oldData: any) => {
+        if (!oldData) return oldData;
+        return updateHeartState(oldData);
+      });
+
       // Return context with previous data for rollback
-      return { previousData, queryKey };
+      return { previousPostsData, previousPostData, postsQueryKey, postQueryKey };
     },
-    // On error, rollback to previous state
+    // On error, rollback both caches to previous state
     onError: (err, postId, context) => {
-      if (context?.previousData) {
-        queryClient.setQueryData(context.queryKey, context.previousData);
+      if (context?.previousPostsData) {
+        queryClient.setQueryData(context.postsQueryKey, context.previousPostsData);
+      }
+      if (context?.previousPostData) {
+        queryClient.setQueryData(context.postQueryKey, context.previousPostData);
       }
       toast({
         title: "오류가 발생했습니다",
