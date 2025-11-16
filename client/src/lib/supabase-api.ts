@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import type { Post, Comment } from './supabase-hooks';
+import type { Post, Comment, HomeworkReview, HomeworkReviewStatus } from './supabase-hooks';
 import { normalizePhone } from './phone-utils';
 
 export async function getPosts(
@@ -951,4 +951,208 @@ export async function getApprovedUserStats() {
     verified,
     unverified,
   };
+}
+
+// ==================== Homework Review Functions ====================
+
+/**
+ * Submit or update a homework review (admin only)
+ * Uses upsert to create or update based on user_id + week combination
+ */
+export async function submitHomeworkReview(
+  userId: string,
+  week: string,
+  status: 'passed' | 'failed'
+): Promise<HomeworkReview> {
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    throw new Error('User not authenticated');
+  }
+
+  // Check if user is admin
+  const { data: userData, error: userError } = await supabase
+    .from('users')
+    .select('role')
+    .eq('id', user.id)
+    .single();
+
+  if (userError || userData?.role !== 'admin') {
+    throw new Error('Only admins can submit homework reviews');
+  }
+
+  const { data, error } = await supabase
+    .from('homework_reviews')
+    .upsert({
+      user_id: userId,
+      week: week,
+      status: status,
+      reviewer_id: user.id,
+    }, {
+      onConflict: 'user_id,week'
+    })
+    .select()
+    .single();
+
+  if (error) {
+    console.error('submitHomeworkReview error:', error);
+    throw error;
+  }
+
+  return data as HomeworkReview;
+}
+
+/**
+ * Delete a homework review (admin only)
+ */
+export async function deleteHomeworkReview(
+  userId: string,
+  week: string
+): Promise<void> {
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    throw new Error('User not authenticated');
+  }
+
+  // Check if user is admin
+  const { data: userData, error: userError } = await supabase
+    .from('users')
+    .select('role')
+    .eq('id', user.id)
+    .single();
+
+  if (userError || userData?.role !== 'admin') {
+    throw new Error('Only admins can delete homework reviews');
+  }
+
+  const { error } = await supabase
+    .from('homework_reviews')
+    .delete()
+    .eq('user_id', userId)
+    .eq('week', week);
+
+  if (error) {
+    console.error('deleteHomeworkReview error:', error);
+    throw error;
+  }
+}
+
+/**
+ * Get homework review for a specific user and week (admin only)
+ */
+export async function getHomeworkReview(
+  userId: string,
+  week: string
+): Promise<HomeworkReview | null> {
+  const { data, error } = await supabase
+    .from('homework_reviews')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('week', week)
+    .maybeSingle();
+
+  if (error) {
+    console.error('getHomeworkReview error:', error);
+    throw error;
+  }
+
+  return data as HomeworkReview | null;
+}
+
+/**
+ * Get all homework reviews for a specific user (admin only)
+ */
+export async function getUserHomeworkReviews(
+  userId: string
+): Promise<HomeworkReview[]> {
+  const { data, error } = await supabase
+    .from('homework_reviews')
+    .select('*')
+    .eq('user_id', userId)
+    .order('week', { ascending: true });
+
+  if (error) {
+    console.error('getUserHomeworkReviews error:', error);
+    throw error;
+  }
+
+  return data as HomeworkReview[];
+}
+
+/**
+ * Get review status for a specific user and week
+ * Returns 'passed', 'failed', or 'not_reviewed'
+ */
+export async function getHomeworkReviewStatus(
+  userId: string,
+  week: string
+): Promise<HomeworkReviewStatus> {
+  const review = await getHomeworkReview(userId, week);
+
+  if (!review) {
+    return 'not_reviewed';
+  }
+
+  return review.status;
+}
+
+export interface UserWeeklyReviewData {
+  userId: string;
+  userName: string;
+  userEmail: string;
+  userProfileImage: string | null;
+  weeklyReviews: {
+    [week: string]: HomeworkReviewStatus;
+  };
+}
+
+/**
+ * Get all users' weekly review status (admin only)
+ * Returns review status for each user for each week
+ */
+export async function getUserWeeklyReviewStatus(): Promise<UserWeeklyReviewData[]> {
+  // Get all regular users (exclude admin)
+  const { data: users, error: usersError } = await supabase
+    .from('users')
+    .select('id, name, email, profile_image')
+    .eq('role', 'user')
+    .order('name', { ascending: true });
+
+  if (usersError) {
+    console.error('getUserWeeklyReviewStatus users error:', usersError);
+    throw usersError;
+  }
+
+  if (!users) return [];
+
+  // Get all homework reviews
+  const { data: reviews, error: reviewsError } = await supabase
+    .from('homework_reviews')
+    .select('*');
+
+  if (reviewsError) {
+    console.error('getUserWeeklyReviewStatus reviews error:', reviewsError);
+    throw reviewsError;
+  }
+
+  const weeks = ['1주차 과제', '2주차 과제', '3주차 과제', '4주차 과제', '5주차 과제', '6주차 과제'];
+
+  return users.map(user => {
+    const userReviews = reviews?.filter(r => r.user_id === user.id) || [];
+
+    const weeklyReviews: { [week: string]: HomeworkReviewStatus } = {};
+    weeks.forEach(week => {
+      const review = userReviews.find(r => r.week === week);
+      weeklyReviews[week] = review ? review.status as HomeworkReviewStatus : 'not_reviewed';
+    });
+
+    return {
+      userId: user.id,
+      userName: user.name,
+      userEmail: user.email,
+      userProfileImage: user.profile_image,
+      weeklyReviews,
+    };
+  });
 }

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Dialog,
   DialogContent,
@@ -9,16 +9,19 @@ import {
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
-import { getPost } from "@/lib/supabase-api";
+import { ChevronLeft, ChevronRight, Loader2, CheckCircle2, XCircle, Circle } from "lucide-react";
+import { getPost, submitHomeworkReview, getHomeworkReview, deleteHomeworkReview } from "@/lib/supabase-api";
 import { useAuth } from "@/contexts/AuthContext";
 import { ImageLightbox } from "./ImageLightbox";
+import { useToast } from "@/hooks/use-toast";
+import type { HomeworkReviewStatus } from "@/lib/supabase-hooks";
 
 interface PostSlideModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   postIds: string[];
   userName: string;
+  userId: string;  // Added: user ID for homework review
   week: string;
 }
 
@@ -27,11 +30,14 @@ export function PostSlideModal({
   onOpenChange,
   postIds,
   userName,
+  userId,
   week,
 }: PostSlideModalProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [lightboxOpen, setLightboxOpen] = useState(false);
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
 
   const currentPostId = postIds[currentIndex];
 
@@ -41,6 +47,74 @@ export function PostSlideModal({
     enabled: open && !!currentPostId,
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
+
+  // Fetch current homework review status (admin only)
+  const { data: currentReview, isLoading: reviewLoading } = useQuery({
+    queryKey: ["homework-review", userId, week],
+    queryFn: () => getHomeworkReview(userId, week),
+    enabled: open && isAdmin,
+    staleTime: 1000 * 60 * 2, // 2 minutes
+  });
+
+  // Get current review status
+  const currentStatus: HomeworkReviewStatus = currentReview
+    ? currentReview.status
+    : 'not_reviewed';
+
+  // Mutation for submitting homework review
+  const submitReviewMutation = useMutation({
+    mutationFn: ({ status }: { status: 'passed' | 'failed' }) =>
+      submitHomeworkReview(userId, week, status),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["homework-review", userId, week] });
+      queryClient.invalidateQueries({ queryKey: ["admin-user-weekly-review-status"] });
+      toast({
+        title: "평가 완료",
+        description: "숙제 평가가 저장되었습니다.",
+        duration: 3000, // 3초 후 자동으로 사라짐
+      });
+    },
+    onError: (error) => {
+      console.error('Submit review error:', error);
+      toast({
+        title: "평가 실패",
+        description: "평가 저장에 실패했습니다. 다시 시도해주세요.",
+        variant: "destructive",
+        duration: 3000, // 3초 후 자동으로 사라짐
+      });
+    },
+  });
+
+  // Mutation for deleting homework review
+  const deleteReviewMutation = useMutation({
+    mutationFn: () => deleteHomeworkReview(userId, week),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["homework-review", userId, week] });
+      queryClient.invalidateQueries({ queryKey: ["admin-user-weekly-review-status"] });
+      toast({
+        title: "평가 삭제",
+        description: "평가가 삭제되었습니다.",
+        duration: 3000, // 3초 후 자동으로 사라짐
+      });
+    },
+    onError: (error) => {
+      console.error('Delete review error:', error);
+      toast({
+        title: "삭제 실패",
+        description: "평가 삭제에 실패했습니다. 다시 시도해주세요.",
+        variant: "destructive",
+        duration: 3000, // 3초 후 자동으로 사라짐
+      });
+    },
+  });
+
+  const handleReviewSubmit = (status: 'passed' | 'failed') => {
+    submitReviewMutation.mutate({ status });
+  };
+
+  const handleReviewDelete = () => {
+    deleteReviewMutation.mutate();
+  };
 
   // Reset index when modal opens or postIds change
   useEffect(() => {
@@ -206,6 +280,72 @@ export function PostSlideModal({
                           </div>
                         </div>
                       ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Admin Review Section */}
+                {isAdmin && (
+                  <div className="pt-4 border-t">
+                    <h4 className="font-semibold mb-3">과제 평가</h4>
+                    <div className="space-y-3">
+                      {/* Current Status */}
+                      <div className="flex items-center gap-2 text-sm">
+                        <span className="text-muted-foreground">현재 상태:</span>
+                        {currentStatus === 'passed' && (
+                          <span className="inline-flex items-center gap-1 text-green-600 dark:text-green-400 font-medium">
+                            <CheckCircle2 className="h-4 w-4" />
+                            통과
+                          </span>
+                        )}
+                        {currentStatus === 'failed' && (
+                          <span className="inline-flex items-center gap-1 text-red-600 dark:text-red-400 font-medium">
+                            <XCircle className="h-4 w-4" />
+                            미통과
+                          </span>
+                        )}
+                        {currentStatus === 'not_reviewed' && (
+                          <span className="inline-flex items-center gap-1 text-gray-500 dark:text-gray-400">
+                            <Circle className="h-4 w-4" />
+                            미평가
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Review Buttons */}
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          variant={currentStatus === 'passed' ? 'default' : 'outline'}
+                          className={currentStatus === 'passed' ? 'bg-green-600 hover:bg-green-700' : ''}
+                          onClick={() => handleReviewSubmit('passed')}
+                          disabled={submitReviewMutation.isPending || deleteReviewMutation.isPending}
+                        >
+                          <CheckCircle2 className="h-4 w-4 mr-1" />
+                          통과
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant={currentStatus === 'failed' ? 'default' : 'outline'}
+                          className={currentStatus === 'failed' ? 'bg-red-600 hover:bg-red-700' : ''}
+                          onClick={() => handleReviewSubmit('failed')}
+                          disabled={submitReviewMutation.isPending || deleteReviewMutation.isPending}
+                        >
+                          <XCircle className="h-4 w-4 mr-1" />
+                          미통과
+                        </Button>
+                        {currentStatus !== 'not_reviewed' && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={handleReviewDelete}
+                            disabled={submitReviewMutation.isPending || deleteReviewMutation.isPending}
+                          >
+                            <Circle className="h-4 w-4 mr-1" />
+                            미평가로 변경
+                          </Button>
+                        )}
+                      </div>
                     </div>
                   </div>
                 )}

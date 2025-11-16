@@ -9,19 +9,31 @@ import {
 } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Loader2 } from "lucide-react";
-import { getUserWeeklyPostStatus, UserWeeklyPostStatus as UserStatus } from "@/lib/supabase-api";
+import { Loader2, CheckCircle2, XCircle, Circle } from "lucide-react";
+import { getUserWeeklyPostStatus, UserWeeklyPostStatus as UserStatus, getUserWeeklyReviewStatus } from "@/lib/supabase-api";
 import { PostSlideModal } from "./PostSlideModal";
+import { useAuth } from "@/contexts/AuthContext";
+import type { HomeworkReviewStatus } from "@/lib/supabase-hooks";
 
 export function UserWeeklyPostStatus() {
   const [selectedUser, setSelectedUser] = useState<UserStatus | null>(null);
   const [selectedWeek, setSelectedWeek] = useState<string | null>(null);
+  const { isAdmin } = useAuth();
 
   const { data: users, isLoading } = useQuery({
     queryKey: ["admin-user-weekly-status"],
     queryFn: getUserWeeklyPostStatus,
     staleTime: 1000 * 60 * 10, // 10 minutes
     gcTime: 1000 * 60 * 30, // 30 minutes
+  });
+
+  // Fetch homework review status (admin only)
+  const { data: reviewData, isLoading: reviewLoading } = useQuery({
+    queryKey: ["admin-user-weekly-review-status"],
+    queryFn: getUserWeeklyReviewStatus,
+    enabled: isAdmin, // Only fetch if user is admin
+    staleTime: 1000 * 60 * 5, // 5 minutes
+    gcTime: 1000 * 60 * 15, // 15 minutes
   });
 
   const weeks = [
@@ -44,6 +56,40 @@ export function UserWeeklyPostStatus() {
   const handleCloseModal = () => {
     setSelectedUser(null);
     setSelectedWeek(null);
+  };
+
+  // Get review status for a specific user and week
+  const getReviewStatus = (userId: string, week: string): HomeworkReviewStatus => {
+    if (!reviewData) return 'not_reviewed';
+    const userReview = reviewData.find(r => r.userId === userId);
+    return userReview?.weeklyReviews[week] || 'not_reviewed';
+  };
+
+  // Render review status badge
+  const renderReviewStatus = (status: HomeworkReviewStatus) => {
+    switch (status) {
+      case 'passed':
+        return (
+          <span className="inline-flex items-center gap-1 text-xs text-green-600 dark:text-green-400">
+            <CheckCircle2 className="h-3 w-3" />
+            통과
+          </span>
+        );
+      case 'failed':
+        return (
+          <span className="inline-flex items-center gap-1 text-xs text-red-600 dark:text-red-400">
+            <XCircle className="h-3 w-3" />
+            미통과
+          </span>
+        );
+      case 'not_reviewed':
+        return (
+          <span className="inline-flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
+            <Circle className="h-3 w-3" />
+            미평가
+          </span>
+        );
+    }
   };
 
   if (isLoading) {
@@ -94,26 +140,33 @@ export function UserWeeklyPostStatus() {
                       </p>
                     </div>
                   </div>
-                  <div className="flex flex-wrap gap-2 ml-10">
+                  <div className="flex flex-wrap gap-3 ml-10">
                     {weeks.map((week) => {
                       const postIds = user.weeklyPosts[week] || [];
                       const hasPost = postIds.length > 0;
+                      const reviewStatus = isAdmin ? getReviewStatus(user.id, week) : 'not_reviewed';
 
                       return (
-                        <Badge
-                          key={week}
-                          className={
-                            hasPost
-                              ? "bg-blue-500 hover:bg-blue-600 text-white cursor-pointer"
-                              : "bg-gray-200 text-gray-500 cursor-not-allowed hover:bg-gray-200"
-                          }
-                          onClick={() => hasPost && handleTagClick(user, week)}
-                        >
-                          {week.replace(" 과제", "")}
-                          {postIds.length > 1 && (
-                            <span className="ml-1 text-xs">({postIds.length})</span>
+                        <div key={week} className="flex flex-col gap-1">
+                          <Badge
+                            className={
+                              hasPost
+                                ? "bg-blue-500 hover:bg-blue-600 text-white cursor-pointer"
+                                : "bg-gray-200 text-gray-500 cursor-not-allowed hover:bg-gray-200"
+                            }
+                            onClick={() => hasPost && handleTagClick(user, week)}
+                          >
+                            {week.replace(" 과제", "")}
+                            {postIds.length > 1 && (
+                              <span className="ml-1 text-xs">({postIds.length})</span>
+                            )}
+                          </Badge>
+                          {isAdmin && hasPost && (
+                            <div className="text-center">
+                              {renderReviewStatus(reviewStatus)}
+                            </div>
                           )}
-                        </Badge>
+                        </div>
                       );
                     })}
                   </div>
@@ -130,6 +183,7 @@ export function UserWeeklyPostStatus() {
           onOpenChange={(open) => !open && handleCloseModal()}
           postIds={selectedUser.weeklyPosts[selectedWeek] || []}
           userName={selectedUser.name}
+          userId={selectedUser.id}
           week={selectedWeek}
         />
       )}
