@@ -9,16 +9,21 @@ import {
 } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, CheckCircle2, XCircle, Circle } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Loader2, CheckCircle2, XCircle, Circle, Download } from "lucide-react";
 import { getUserWeeklyPostStatus, UserWeeklyPostStatus as UserStatus, getUserWeeklyReviewStatus } from "@/lib/supabase-api";
 import { PostSlideModal } from "./PostSlideModal";
 import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
 import type { HomeworkReviewStatus } from "@/lib/supabase-hooks";
+import { exportWeeklyStatusToExcel } from "@/lib/excel-utils";
 
 export function UserWeeklyPostStatus() {
   const [selectedUser, setSelectedUser] = useState<UserStatus | null>(null);
   const [selectedWeek, setSelectedWeek] = useState<string | null>(null);
+  const [isExporting, setIsExporting] = useState(false);
   const { isAdmin } = useAuth();
+  const { toast } = useToast();
 
   const { data: users, isLoading } = useQuery({
     queryKey: ["admin-user-weekly-status"],
@@ -92,6 +97,42 @@ export function UserWeeklyPostStatus() {
     }
   };
 
+  // 엑셀 다운로드 핸들러
+  const handleExcelDownload = () => {
+    if (!users || !reviewData) {
+      toast({
+        title: "다운로드 실패",
+        description: "데이터를 불러오는 중입니다. 잠시 후 다시 시도해주세요.",
+        variant: "destructive",
+        duration: 3000,
+      });
+      return;
+    }
+
+    try {
+      setIsExporting(true);
+      exportWeeklyStatusToExcel({
+        users,
+        reviewData,
+      });
+      toast({
+        title: "다운로드 완료",
+        description: "엑셀 파일이 다운로드되었습니다.",
+        duration: 3000,
+      });
+    } catch (error) {
+      console.error('Excel export error:', error);
+      toast({
+        title: "다운로드 실패",
+        description: "엑셀 파일 생성에 실패했습니다. 다시 시도해주세요.",
+        variant: "destructive",
+        duration: 3000,
+      });
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <Card>
@@ -111,10 +152,32 @@ export function UserWeeklyPostStatus() {
     <>
       <Card>
         <CardHeader>
-          <CardTitle>수강생 - 주차별 게시글 작성 현황</CardTitle>
-          <CardDescription>
-            수강생의 주차별 과제 제출 현황입니다. 파란색 태그를 클릭하여 게시글을 확인하세요.
-          </CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>수강생 - 주차별 게시글 작성 현황</CardTitle>
+              <CardDescription>
+                수강생의 주차별 과제 제출 현황입니다. 파란색 태그를 클릭하여 게시글을 확인하세요.
+              </CardDescription>
+            </div>
+            <Button
+              onClick={handleExcelDownload}
+              disabled={isExporting || !users || users.length === 0}
+              variant="outline"
+              size="sm"
+            >
+              {isExporting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  다운로드 중...
+                </>
+              ) : (
+                <>
+                  <Download className="mr-2 h-4 w-4" />
+                  엑셀 다운로드
+                </>
+              )}
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           {!users || users.length === 0 ? (
