@@ -492,6 +492,8 @@ export interface UserWeeklyPostStatus {
   name: string;
   email: string;
   profile_image: string | null;
+  approvedName: string | null;  // approved_users의 실제 이름
+  approvedPhone: string | null; // approved_users의 전화번호
   weeklyPosts: {
     [key: string]: string[];  // week -> post IDs
   };
@@ -508,8 +510,18 @@ export async function getUserWeeklyPostStatus(): Promise<UserWeeklyPostStatus[]>
   if (usersError) throw usersError;
   if (!users) return [];
 
-  // Get all posts for these users
+  // Get approved_users info for these users
   const userIds = users.map(u => u.id);
+  const { data: approvedUsers, error: approvedError } = await supabase
+    .from('approved_users')
+    .select('user_id, name, phone')
+    .in('user_id', userIds);
+
+  if (approvedError) {
+    console.error('Error fetching approved users:', approvedError);
+  }
+
+  // Get all posts for these users
   const { data: posts, error: postsError } = await supabase
     .from('posts')
     .select('id, user_id, week')
@@ -524,6 +536,7 @@ export async function getUserWeeklyPostStatus(): Promise<UserWeeklyPostStatus[]>
 
   return users.map(user => {
     const userPosts = posts?.filter(p => p.user_id === user.id) || [];
+    const approvedUser = approvedUsers?.find(au => au.user_id === user.id);
 
     const weeklyPosts: { [key: string]: string[] } = {};
     weeks.forEach(week => {
@@ -537,6 +550,8 @@ export async function getUserWeeklyPostStatus(): Promise<UserWeeklyPostStatus[]>
       name: user.name,
       email: user.email,
       profile_image: user.profile_image,
+      approvedName: approvedUser?.name || null,
+      approvedPhone: approvedUser?.phone || null,
       weeklyPosts,
     };
   });

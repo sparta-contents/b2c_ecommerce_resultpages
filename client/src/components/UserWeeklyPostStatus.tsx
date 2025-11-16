@@ -135,9 +135,21 @@ export function UserWeeklyPostStatus() {
                     </Avatar>
                     <div>
                       <p className="font-medium text-sm">{user.name}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {user.email}
-                      </p>
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <span>{user.email}</span>
+                        {user.approvedName && (
+                          <>
+                            <span>•</span>
+                            <span className="font-medium text-foreground">{user.approvedName}</span>
+                          </>
+                        )}
+                        {user.approvedPhone && (
+                          <>
+                            <span>•</span>
+                            <span>{user.approvedPhone}</span>
+                          </>
+                        )}
+                      </div>
                     </div>
                   </div>
                   <div className="flex flex-wrap gap-3 ml-10">
